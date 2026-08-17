@@ -26,10 +26,12 @@ import { sendTelegramMessage } from '../telegram';
 
 const MIN_CREATIVES = 2;
 const MAX_CREATIVES = 7;
+const BROKEN_FILES = ['13111.mp4'];
 
 function pickRandomFiles(files: DriveFile[]): DriveFile[] {
-  const count = Math.min(files.length, MIN_CREATIVES + Math.floor(Math.random() * (MAX_CREATIVES - MIN_CREATIVES + 1)));
-  const shuffled = [...files].sort(() => Math.random() - 0.5);
+  const usableFiles = files.filter(f => !BROKEN_FILES.includes(f.name));
+  const count = Math.min(usableFiles.length, MIN_CREATIVES + Math.floor(Math.random() * (MAX_CREATIVES - MIN_CREATIVES + 1)));
+  const shuffled = [...usableFiles].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
 
