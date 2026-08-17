@@ -6,10 +6,15 @@
   "scripts": {
     "build": "tsc",
     "auto-pause": "node dist/jobs/autoPause.js",
-    "dev:auto-pause": "ts-node src/jobs/autoPause.ts"
+    "auto-launch": "node dist/jobs/autoLaunch.js",
+    "dev:auto-pause": "ts-node src/jobs/autoPause.ts",
+    "dev:auto-launch": "ts-node src/jobs/autoLaunch.ts"
   },
   "dependencies": {
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "googleapis": "^140.0.1",
+    "form-data": "^4.0.0",
+    "ioredis": "^5.4.1"
   },
   "devDependencies": {
     "typescript": "^5.5.4",
