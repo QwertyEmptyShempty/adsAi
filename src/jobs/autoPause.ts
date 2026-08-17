@@ -53,7 +53,7 @@ function evaluateAd(row: AdRow): Evaluated {
   const ageDays = createdTime ? (Date.now() - createdTime) / (1000 * 60 * 60 * 24) : 0;
   const graceElapsed = ageDays >= RULES.graceAgeDays && spend >= RULES.graceMinSpend;
 
-  const hardKill = lpvCost !== null && lpvCost >= RULES.hardKillLpvCost && !hasSubscription;
+  const hardKill = lpvCost !== null && lpvCost > RULES.hardKillLpvCost && !hasSubscription;
   const softKill = graceElapsed && lpvCost !== null && lpvCost > RULES.softKillLpvCost && !hasSubscription;
   const subscribeCost = hasSubscription ? spend / subscribeCount : null;
   const subscribeCostKill = graceElapsed && hasSubscription && subscribeCost !== null && subscribeCost > RULES.softKillSubscribeCost;

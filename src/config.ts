@@ -38,7 +38,7 @@ export function getActiveAccounts(): AccountConfig[] {
 
 // Auto-pause / auto-delete thresholds
 export const RULES = {
-  hardKillLpvCost: 13,          // pause immediately if cost per landing_page_view >= this, and no subscription
+  hardKillLpvCost: 10,          // pause immediately if cost per landing_page_view > this, and no subscription -- no grace period wait
   softKillLpvCost: 5,           // pause after grace period if cost per LPV > this, and no subscription
   softKillSubscribeCost: 10,    // pause after grace period if cost per subscription > this
   graceAgeDays: 3,
