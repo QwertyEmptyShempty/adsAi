@@ -52,6 +52,21 @@ export function pickLatestFolder(folders: DriveFolder[]): DriveFolder | null {
   return [...folders].sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime())[0];
 }
 
+export async function findVideoFolder(): Promise<DriveFolder | null> {
+  const { videoFolders } = await findCandidateFolders();
+  return pickLatestFolder(videoFolders);
+}
+
+export async function listFilesInFolderSortedByNewest(folderId: string): Promise<DriveFile[]> {
+  const drive = getDriveClient();
+  const res = await drive.files.list({
+    q: `'${folderId}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='video/mp4' or mimeType='video/quicktime')`,
+    fields: 'files(id,name,mimeType,createdTime)',
+    orderBy: 'createdTime desc',
+    pageSize: 200,
+  });
+  return (res.data.files || []) as (DriveFile & { createdTime?: string })[];
+}
 export async function listFilesInFolder(folderId: string): Promise<DriveFile[]> {
   const drive = getDriveClient();
   const res = await drive.files.list({
