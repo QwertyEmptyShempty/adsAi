@@ -1,0 +1,20 @@
+{
+  "name": "ads-automation-core",
+  "version": "1.0.0",
+  "description": "Facebook Ads automation: auto-pause/delete underperforming or disapproved ads",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "auto-pause": "node dist/jobs/autoPause.js",
+    "dev:auto-pause": "ts-node src/jobs/autoPause.ts"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.14.0",
+    "@types/node-fetch": "^2.6.11"
+  }
+}
