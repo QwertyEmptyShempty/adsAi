@@ -68,7 +68,8 @@ export async function createCampaign(accountId: string, name: string, dailyBudge
     name,
     objective: 'OUTCOME_LEADS',
     status: 'ACTIVE',
-    special_ad_categories: JSON.stringify([]),
+    special_ad_categories: JSON.stringify(['FINANCIAL_PRODUCTS_SERVICES']),
+    special_ad_category_country: JSON.stringify(['TR']),
     daily_budget: String(dailyBudgetMinorUnits),
     bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
   });
