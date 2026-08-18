@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 
 const PARENT_FOLDER_ID = '18nzYWBFVrwUAgI1ZEQx5-oWPP4Gph2xH';
+const VIDEO_FOLDER_ID = '1eRh2qQUISFekyzYfoBJKyAFuABXYef3q';
 
 function getAuth() {
   const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
@@ -34,16 +35,18 @@ export interface DriveFile {
 const VIDEO_EXT = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
 
 // Port of JS_PickLatestFolder, but per-account alternation state is handled by the caller (mediaState.ts)
+// Video always comes from the fixed VIDEO_FOLDER_ID; photo folders are still found by name pattern under the parent.
 export async function findCandidateFolders(): Promise<{ videoFolders: DriveFolder[]; photoFolders: DriveFolder[] }> {
   const drive = getDriveClient();
   const res = await drive.files.list({
-    q: `'${PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and (name contains 'Адапты Турция' or name contains 'Видео' or name contains 'Видосы')`,
+    q: `'${PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and name contains 'Адапты Турция'`,
     fields: 'files(id,name,createdTime)',
     pageSize: 200,
   });
-  const folders = (res.data.files || []) as DriveFolder[];
-  const videoFolders = folders.filter(f => /видео|видосы/i.test(f.name));
-  const photoFolders = folders.filter(f => !videoFolders.includes(f));
+  const photoFolders = (res.data.files || []) as DriveFolder[];
+  const videoFolders: DriveFolder[] = [
+    { id: VIDEO_FOLDER_ID, name: 'Видео (fixed)', createdTime: new Date().toISOString() },
+  ];
   return { videoFolders, photoFolders };
 }
 
@@ -53,8 +56,7 @@ export function pickLatestFolder(folders: DriveFolder[]): DriveFolder | null {
 }
 
 export async function findVideoFolder(): Promise<DriveFolder | null> {
-  const { videoFolders } = await findCandidateFolders();
-  return pickLatestFolder(videoFolders);
+  return { id: VIDEO_FOLDER_ID, name: 'Видео (fixed)', createdTime: new Date().toISOString() };
 }
 
 export async function listFilesInFolderSortedByNewest(folderId: string): Promise<DriveFile[]> {
