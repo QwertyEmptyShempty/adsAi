@@ -166,6 +166,10 @@ async function processAccount(acc: AccountConfig) {
 }
 
 async function main() {
+  if (process.env.AUTO_LAUNCH_DISABLED === 'true') {
+    console.log('AUTO_LAUNCH_DISABLED is set — skipping this run.');
+    return;
+  }
   const accounts = getActiveAccounts();
   console.log(`Starting auto-launch run for ${accounts.length} active accounts...`);
   for (const acc of accounts) {
