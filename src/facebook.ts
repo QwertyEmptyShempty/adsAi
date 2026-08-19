@@ -26,7 +26,9 @@ async function request<T = any>(
   for (const [k, v] of Object.entries(query)) {
     url.searchParams.set(k, v);
   }
-  url.searchParams.set('access_token', getToken());
+  if (!query.access_token) {
+    url.searchParams.set('access_token', getToken());
+  }
 
   const res = await fetch(url.toString(), { method });
   const body = (await res.json().catch(() => ({}))) as T;

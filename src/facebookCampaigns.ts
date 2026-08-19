@@ -172,12 +172,24 @@ export async function getVideoThumbnail(videoId: string): Promise<string | null>
 
 // ---- Creative bodies (port of JS_Creative / JS_Creative_Image) ----
 
+async function getPageAccessToken(pageId: string): Promise<string | null> {
+  const res = await fbGet<{ access_token?: string; error?: any }>(`/${pageId}`, { fields: 'access_token' });
+  if (res.ok && res.body.access_token) {
+    return res.body.access_token;
+  }
+  console.warn(`Could not get page access token for ${pageId}:`, JSON.stringify(res.body.error));
+  return null;
+}
+
 export async function getOrCreatePageBackedInstagramAccount(pageId: string): Promise<string | null> {
-  const listRes = await fbGet<{ data?: { id: string }[]; error?: any }>(`/${pageId}/page_backed_instagram_accounts`, {});
+  const pageToken = await getPageAccessToken(pageId);
+  const tokenParam: Record<string, string> = pageToken ? { access_token: pageToken } : {};
+
+  const listRes = await fbGet<{ data?: { id: string }[]; error?: any }>(`/${pageId}/page_backed_instagram_accounts`, tokenParam);
   if (listRes.ok && listRes.body.data && listRes.body.data.length > 0) {
     return listRes.body.data[0].id;
   }
-  const createRes = await fbPost<{ id?: string; error?: any }>(`/${pageId}/page_backed_instagram_accounts`, {});
+  const createRes = await fbPost<{ id?: string; error?: any }>(`/${pageId}/page_backed_instagram_accounts`, tokenParam);
   if (createRes.ok && createRes.body.id) {
     return createRes.body.id;
   }
