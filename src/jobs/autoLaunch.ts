@@ -273,7 +273,7 @@ async function processPhotoAccount(acc: AccountConfig) {
 }
 
 async function processAccount(acc: AccountConfig, otherLocaleIds: number[], turkishLocaleId: number | null) {
-  const mediaType = await nextMediaType(acc.accountId);
+  const mediaType = process.env.FORCE_VIDEO === 'true' ? 'video' : await nextMediaType(acc.accountId);
   if (mediaType === 'video') {
     await processVideoAccount(acc, otherLocaleIds, turkishLocaleId);
   } else {
