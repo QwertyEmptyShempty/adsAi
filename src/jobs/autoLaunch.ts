@@ -20,9 +20,16 @@ import {
   getVideoThumbnail,
   buildVideoCreativeBody,
   buildImageCreativeBody,
+  buildMultiLanguageVideoCreativeBody,
+  resolveAdLocaleIds,
   createAdCreative,
 } from '../facebookCampaigns';
 import { sendTelegramMessage } from '../telegram';
+
+// Languages used in the successful "18.07_TR запускЧерезЯзыкиИФинансы" campaign
+const AD_LANGUAGES = ['Armenian', 'Malay', 'Filipino', 'German', 'Esperanto', 'Norwegian', 'Persian', 'Traditional Chinese (Taiwan)', 'Turkish'];
+const AD_TITLE = 'MacBook Air с чипом M5';
+const AD_BODY = 'Чип M5 — это не просто обновление. Это другой уровень скорости: повседневные задачи, монтаж, работа с ИИ — всё летает. До 18 часов автономной работы, чтобы вы закрывали крышку только когда сами захотите.\nНевероятно тонкий и лёгкий алюминиевый корпус. Яркий Liquid Retina дисплей. Камера Center Stage, которая всегда держит вас в кадре. 16 ГБ унифицированной памяти и 512 ГБ накопителя уже в базовой комплектации.';
 
 const MIN_CREATIVES = 2;
 const MAX_CREATIVES = 7;
@@ -43,7 +50,7 @@ function buildCampaignName(scheme: 'scheme_1N1' | 'scheme_11N', label: string): 
   return `${dateStr} Авто ${schemeLabel} ${timeStr} — ${label}`;
 }
 
-async function processAccount(acc: AccountConfig) {
+async function processAccount(acc: AccountConfig, localeIds: number[]) {
   const label = acc.label;
 
   // 1. Decide photo or video for this account (persisted, alternates over time)
@@ -130,7 +137,9 @@ async function processAccount(acc: AccountConfig) {
           continue;
         }
         const thumb = (await getVideoThumbnail(videoRes.id)) || '';
-        creativeBody = buildVideoCreativeBody(pageId, videoRes.id, thumb, destinationUrl, `${campaignName} — Creative ${i + 1}`);
+        creativeBody = localeIds.length > 0
+          ? buildMultiLanguageVideoCreativeBody(pageId, videoRes.id, thumb, destinationUrl, AD_TITLE, AD_BODY, localeIds, `${campaignName} — Creative ${i + 1}`)
+          : buildVideoCreativeBody(pageId, videoRes.id, thumb, destinationUrl, `${campaignName} — Creative ${i + 1}`);
       } else {
         const buffer = await downloadFileBuffer(file.id);
         const imgRes = await uploadImage(acc.accountId, buffer, file.name);
@@ -170,11 +179,22 @@ async function main() {
     console.log('AUTO_LAUNCH_DISABLED is set — skipping this run.');
     return;
   }
+
+  console.log('Resolving ad locale IDs for multi-language ads...');
+  const resolved = await resolveAdLocaleIds(AD_LANGUAGES);
+  const missing = resolved.filter(r => r.id === null).map(r => r.name);
+  if (missing.length > 0) {
+    console.warn('Could not resolve locale IDs for:', missing.join(', '));
+    await sendTelegramMessage(`⚠️ Не удалось найти ID локали для: ${missing.join(', ')}`);
+  }
+  const localeIds = resolved.filter(r => r.id !== null).map(r => r.id as number);
+  console.log(`Resolved ${localeIds.length}/${AD_LANGUAGES.length} locale IDs.`);
+
   const accounts = getActiveAccounts();
   console.log(`Starting auto-launch run for ${accounts.length} active accounts...`);
   for (const acc of accounts) {
     try {
-      await processAccount(acc);
+      await processAccount(acc, localeIds);
     } catch (err) {
       console.error(`Account ${acc.label} (${acc.accountId}) failed entirely:`, err);
       await sendTelegramMessage(`⚠️ <b>${acc.label}</b>\nЗапуск полностью упал: ${err}`);

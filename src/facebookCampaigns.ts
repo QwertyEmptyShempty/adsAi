@@ -186,6 +186,55 @@ export function buildImageCreativeBody(pageId: string, imageHash: string, destin
   };
 }
 
+export async function resolveAdLocaleId(languageName: string): Promise<number | null> {
+  const res = await fbGet<{ data?: { key: number; name: string }[] }>('/search', {
+    type: 'adlocale',
+    q: languageName,
+  });
+  const match = res.body.data?.[0];
+  return match ? match.key : null;
+}
+
+export async function resolveAdLocaleIds(languageNames: string[]): Promise<{ name: string; id: number | null }[]> {
+  const results: { name: string; id: number | null }[] = [];
+  for (const name of languageNames) {
+    const id = await resolveAdLocaleId(name);
+    results.push({ name, id });
+  }
+  return results;
+}
+
+export function buildMultiLanguageVideoCreativeBody(
+  pageId: string,
+  videoId: string,
+  thumbUrl: string,
+  destinationUrl: string,
+  title: string,
+  body: string,
+  localeIds: number[],
+  name: string
+) {
+  return {
+    name,
+    object_story_spec: { page_id: pageId },
+    asset_feed_spec: {
+      titles: [{ text: title, adlabels: [{ name: 'default' }] }],
+      bodies: [{ text: body, adlabels: [{ name: 'default' }] }],
+      videos: [{ video_id: videoId, thumbnail_url: thumbUrl, adlabels: [{ name: 'default' }] }],
+      link_urls: [{ website_url: destinationUrl, adlabels: [{ name: 'default' }] }],
+      ad_formats: ['SINGLE_VIDEO'],
+      call_to_action_types: ['SUBSCRIBE'],
+      asset_customization_rules: localeIds.map(localeId => ({
+        customization_spec: { locales: [localeId] },
+        title_label: { name: 'default' },
+        body_label: { name: 'default' },
+        video_label: { name: 'default' },
+        link_url_label: { name: 'default' },
+      })),
+    },
+  };
+}
+
 export async function createAdCreative(accountId: string, body: object): Promise<FbResult<{ id: string; error?: any }>> {
   const token = process.env.FB_ACCESS_TOKEN;
   const res = await fetch(`https://graph.facebook.com/v19.0/act_${accountId}/adcreatives?access_token=${token}`, {
