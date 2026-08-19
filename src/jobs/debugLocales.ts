@@ -1,13 +1,8 @@
 import { fbGet } from '../facebook';
 
 const CANDIDATES: Record<string, string[]> = {
-  Armenian: ['Armenian', 'hy_AM', 'Հայերեն'],
-  Malay: ['Malay', 'ms_MY', 'Bahasa Melayu'],
-  German: ['German', 'de_DE', 'Deutsch'],
-  Norwegian: ['Norwegian', 'nb_NO', 'Norwegian (Bokmal)', 'Norsk bokmål'],
-  Persian: ['Persian', 'fa_IR', 'Farsi', 'فارسی'],
-  'Traditional Chinese (Taiwan)': ['Traditional Chinese (Taiwan)', 'zh_TW', 'Chinese (Taiwan)', 'Chinese', 'Traditional Chinese'],
-  Turkish: ['Turkish', 'tr_TR', 'Türkçe'],
+  Norwegian: ['Norsk', 'Norsk (bokmål)', 'Norwegian Bokmal', 'Norwegian bokmal', 'no_NO', 'Bokmål'],
+  'Traditional Chinese (Taiwan)': ['繁體中文(台灣)', '繁體中文', '中文(台灣)', 'zh_Hant_TW', 'Chinese (Traditional)', 'Mandarin'],
 };
 
 async function main() {
