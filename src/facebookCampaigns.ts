@@ -187,10 +187,11 @@ export function buildImageCreativeBody(pageId: string, imageHash: string, destin
 }
 
 export async function resolveAdLocaleId(languageName: string): Promise<number | null> {
-  const res = await fbGet<{ data?: { key: number; name: string }[] }>('/search', {
+  const res = await fbGet<{ data?: { key: number; name: string }[]; error?: any }>('/search', {
     type: 'adlocale',
     q: languageName,
   });
+  console.log(`[locale search] "${languageName}" ->`, JSON.stringify(res.body));
   const match = res.body.data?.[0];
   return match ? match.key : null;
 }
