@@ -131,6 +131,22 @@ export async function uploadImage(accountId: string, fileBuffer: Buffer, filenam
   return { hash: firstKey ? images[firstKey].hash : null };
 }
 
+export async function uploadVideoByBuffer(accountId: string, fileBuffer: Buffer, filename: string, name: string): Promise<{ id: string | null; error?: any }> {
+  const token = process.env.FB_ACCESS_TOKEN;
+  const form = new FormData();
+  form.append('source', fileBuffer, filename);
+  form.append('name', name);
+  form.append('access_token', token || '');
+
+  const res = await fetch(`https://graph.facebook.com/v19.0/act_${accountId}/advideos`, {
+    method: 'POST',
+    body: form as any,
+  });
+  const body: any = await res.json().catch(() => ({}));
+  if (!res.ok || body.error) return { id: null, error: body.error };
+  return { id: body.id };
+}
+
 export async function uploadVideoByUrl(accountId: string, fileUrl: string, name: string): Promise<{ id: string | null; error?: any }> {
   const res = await fbPost<{ id: string; error?: any }>(`/act_${accountId}/advideos`, { file_url: fileUrl, name });
   if (!res.ok || res.body.error) return { id: null, error: res.body.error };

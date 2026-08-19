@@ -1,11 +1,11 @@
 import { getActiveAccounts, AccountConfig } from '../config';
-import { findVideoFolder, listFilesInFolderSortedByNewest, directDownloadUrl } from '../googleDrive';
+import { findVideoFolder, listFilesInFolderSortedByNewest, downloadFileBuffer } from '../googleDrive';
 import {
   resolvePixelAndPage,
   createCampaign,
   createAdset,
   createAd,
-  uploadVideoByUrl,
+  uploadVideoByBuffer,
   waitForVideoReady,
   getVideoThumbnail,
   buildVideoCreativeBody,
@@ -60,8 +60,10 @@ async function launchOnAccount(acc: AccountConfig, videoFileId: string, campaign
   }
   const adsetId = adsetRes.body.id;
 
-  const fileUrl = directDownloadUrl(videoFileId);
-  const videoRes = await uploadVideoByUrl(acc.accountId, fileUrl, `${campaignName} — video`);
+  console.log(`[${label}] Downloading ${campaignNamePrefix} from Drive...`);
+  const buffer = await downloadFileBuffer(videoFileId);
+  console.log(`[${label}] Downloaded ${buffer.length} bytes, uploading to Facebook...`);
+  const videoRes = await uploadVideoByBuffer(acc.accountId, buffer, campaignNamePrefix, `${campaignName} — video`);
   if (!videoRes.id) {
     console.error(`[${label}] Video upload failed:`, videoRes.error?.message);
     await sendTelegramMessage(`⚠️ <b>${label}</b>\nОшибка загрузки видео: ${videoRes.error?.message}`);

@@ -4,7 +4,6 @@ import {
   findCandidateFolders,
   pickLatestFolder,
   listFilesInFolder,
-  directDownloadUrl,
   downloadFileBuffer,
   getMacbookVideoFile,
   DriveFile,
@@ -15,7 +14,7 @@ import {
   createAdset,
   createAd,
   uploadImage,
-  uploadVideoByUrl,
+  uploadVideoByBuffer,
   waitForVideoReady,
   getVideoThumbnail,
   buildImageCreativeBody,
@@ -50,8 +49,10 @@ function buildCampaignName(scheme: string, label: string): string {
 }
 
 async function uploadVideoAndWait(accountId: string, file: DriveFile, label: string, tag: string): Promise<{ id: string; thumb: string } | null> {
-  const fileUrl = directDownloadUrl(file.id);
-  const videoRes = await uploadVideoByUrl(accountId, fileUrl, `${label} — ${tag}`);
+  console.log(`[${label}] Downloading ${file.name} (${tag}) from Drive...`);
+  const buffer = await downloadFileBuffer(file.id);
+  console.log(`[${label}] Downloaded ${buffer.length} bytes, uploading to Facebook...`);
+  const videoRes = await uploadVideoByBuffer(accountId, buffer, file.name, `${label} — ${tag}`);
   if (!videoRes.id) {
     console.error(`[${label}] Video upload failed for ${file.name} (${tag}):`, videoRes.error?.message);
     return null;
