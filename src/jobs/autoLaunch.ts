@@ -155,7 +155,7 @@ async function processVideoAccount(
 
       const creativeRes = await createAdCreative(acc.accountId, creativeBody);
       if (!creativeRes.ok || creativeRes.body.error) {
-        console.error(`[${label}] Creative creation failed for ${file.name}:`, creativeRes.body.error?.message);
+        console.error(`[${label}] Creative creation failed for ${file.name}:`, JSON.stringify(creativeRes.body.error));
         continue;
       }
 
@@ -249,7 +249,7 @@ async function processPhotoAccount(acc: AccountConfig) {
 
       const creativeRes = await createAdCreative(acc.accountId, creativeBody);
       if (!creativeRes.ok || creativeRes.body.error) {
-        console.error(`[${label}] Creative creation failed for ${file.name}:`, creativeRes.body.error?.message);
+        console.error(`[${label}] Creative creation failed for ${file.name}:`, JSON.stringify(creativeRes.body.error));
         continue;
       }
 

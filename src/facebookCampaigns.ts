@@ -137,7 +137,7 @@ export async function uploadVideoByUrl(accountId: string, fileUrl: string, name:
   return { id: res.body.id };
 }
 
-export async function waitForVideoReady(videoId: string, maxWaitMs = 120000, intervalMs = 5000): Promise<boolean> {
+export async function waitForVideoReady(videoId: string, maxWaitMs = 240000, intervalMs = 5000): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     const res = await fbGet<{ status?: { video_status?: string } }>(`/${videoId}`, { fields: 'status' });
