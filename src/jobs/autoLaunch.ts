@@ -35,9 +35,11 @@ const MIN_CREATIVES = 2;
 const MAX_CREATIVES = 7;
 const BROKEN_FILES = ['13111.mp4'];
 
-function pickRandomFiles(files: DriveFile[]): DriveFile[] {
+function pickRandomFiles(files: DriveFile[], exactCount?: number): DriveFile[] {
   const usableFiles = files.filter(f => !BROKEN_FILES.includes(f.name));
-  const count = Math.min(usableFiles.length, MIN_CREATIVES + Math.floor(Math.random() * (MAX_CREATIVES - MIN_CREATIVES + 1)));
+  const count = exactCount !== undefined
+    ? Math.min(usableFiles.length, exactCount)
+    : Math.min(usableFiles.length, MIN_CREATIVES + Math.floor(Math.random() * (MAX_CREATIVES - MIN_CREATIVES + 1)));
   const shuffled = [...usableFiles].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
@@ -71,8 +73,8 @@ async function processAccount(acc: AccountConfig, localeIds: number[]) {
     console.log(`[${label}] Folder "${folder.name}" has no files, skipping.`);
     return;
   }
-  const picked = pickRandomFiles(files);
-  const scheme: 'scheme_1N1' | 'scheme_11N' = Math.random() < 0.5 ? 'scheme_1N1' : 'scheme_11N';
+  const picked = mediaType === 'video' ? pickRandomFiles(files, 5) : pickRandomFiles(files);
+  const scheme: 'scheme_1N1' | 'scheme_11N' = mediaType === 'video' ? 'scheme_1N1' : (Math.random() < 0.5 ? 'scheme_1N1' : 'scheme_11N');
   const campaignName = buildCampaignName(scheme, label);
 
   console.log(`[${label}] ${mediaType}, folder="${folder.name}", ${picked.length} creatives, scheme=${scheme}`);
