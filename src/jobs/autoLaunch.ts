@@ -305,7 +305,12 @@ async function main() {
   console.log(`Resolved ${otherLocaleIds.length}/${AD_LANGUAGES.length} other locale IDs, Turkish=${turkishLocaleId}.`);
 
   const accounts = getActiveAccounts();
-  const testAccounts = process.env.TEST_SINGLE_ACCOUNT === 'true' ? accounts.slice(0, 1) : accounts;
+  let testAccounts = accounts;
+  if (process.env.TEST_ACCOUNT_ID) {
+    testAccounts = accounts.filter(a => a.accountId === process.env.TEST_ACCOUNT_ID);
+  } else if (process.env.TEST_SINGLE_ACCOUNT === 'true') {
+    testAccounts = accounts.slice(0, 1);
+  }
   console.log(`Starting auto-launch run for ${testAccounts.length} active accounts...`);
   for (const acc of testAccounts) {
     try {
