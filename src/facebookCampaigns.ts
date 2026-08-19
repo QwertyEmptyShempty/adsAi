@@ -277,6 +277,7 @@ export function buildMultiLanguageVideoCreativeBody(
 ) {
   const titleLabel = (localeId: number) => `title_${localeId}`;
   const bodyLabel = (localeId: number) => `body_${localeId}`;
+  const descLabel = (localeId: number) => `desc_${localeId}`;
 
   return {
     name,
@@ -284,6 +285,7 @@ export function buildMultiLanguageVideoCreativeBody(
     asset_feed_spec: {
       titles: localeIds.map(localeId => ({ text: title, adlabels: [{ name: titleLabel(localeId) }] })),
       bodies: localeIds.map(localeId => ({ text: body, adlabels: [{ name: bodyLabel(localeId) }] })),
+      descriptions: localeIds.map(localeId => ({ text: title, adlabels: [{ name: descLabel(localeId) }] })),
       videos: [{ video_id: videoId, thumbnail_url: thumbUrl, adlabels: [{ name: 'default' }] }],
       link_urls: [{ website_url: destinationUrl, adlabels: [{ name: 'default' }] }],
       ad_formats: ['SINGLE_VIDEO'],
@@ -293,6 +295,7 @@ export function buildMultiLanguageVideoCreativeBody(
           customization_spec: { locales: [localeIds[0]] },
           title_label: { name: titleLabel(localeIds[0]) },
           body_label: { name: bodyLabel(localeIds[0]) },
+          description_label: { name: descLabel(localeIds[0]) },
           video_label: { name: 'default' },
           link_url_label: { name: 'default' },
           is_default: true,
@@ -301,6 +304,7 @@ export function buildMultiLanguageVideoCreativeBody(
           customization_spec: { locales: [localeId] },
           title_label: { name: titleLabel(localeId) },
           body_label: { name: bodyLabel(localeId) },
+          description_label: { name: descLabel(localeId) },
           video_label: { name: 'default' },
           link_url_label: { name: 'default' },
         })),
@@ -324,6 +328,7 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
   const allLocaleIds = [...primaryLocaleIds, ...secondaryLocaleIds];
   const titleLabel = (localeId: number) => `title_${localeId}`;
   const bodyLabel = (localeId: number) => `body_${localeId}`;
+  const descLabel = (localeId: number) => `desc_${localeId}`;
 
   const rules = [
     // First rule is flagged is_default:true -- Facebook requires exactly this pattern (a real rule,
@@ -332,6 +337,7 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
       customization_spec: { locales: [primaryLocaleIds[0]] },
       title_label: { name: titleLabel(primaryLocaleIds[0]) },
       body_label: { name: bodyLabel(primaryLocaleIds[0]) },
+      description_label: { name: descLabel(primaryLocaleIds[0]) },
       video_label: { name: 'primary' },
       link_url_label: { name: 'default' },
       is_default: true,
@@ -340,6 +346,7 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
       customization_spec: { locales: [localeId] },
       title_label: { name: titleLabel(localeId) },
       body_label: { name: bodyLabel(localeId) },
+      description_label: { name: descLabel(localeId) },
       video_label: { name: 'primary' },
       link_url_label: { name: 'default' },
     })),
@@ -347,6 +354,7 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
       customization_spec: { locales: [localeId] },
       title_label: { name: titleLabel(localeId) },
       body_label: { name: bodyLabel(localeId) },
+      description_label: { name: descLabel(localeId) },
       video_label: { name: 'secondary' },
       link_url_label: { name: 'default' },
     })),
@@ -358,6 +366,7 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
     asset_feed_spec: {
       titles: allLocaleIds.map(localeId => ({ text: title, adlabels: [{ name: titleLabel(localeId) }] })),
       bodies: allLocaleIds.map(localeId => ({ text: body, adlabels: [{ name: bodyLabel(localeId) }] })),
+      descriptions: allLocaleIds.map(localeId => ({ text: title, adlabels: [{ name: descLabel(localeId) }] })),
       videos: [
         { video_id: primaryVideo.id, thumbnail_url: primaryVideo.thumb, adlabels: [{ name: 'primary' }] },
         { video_id: secondaryVideo.id, thumbnail_url: secondaryVideo.thumb, adlabels: [{ name: 'secondary' }] },
