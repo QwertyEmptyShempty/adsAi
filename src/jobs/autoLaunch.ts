@@ -162,7 +162,7 @@ async function processVideoAccount(
 
       const adRes = await createAd(acc.accountId, `${campaignName} — Ad`, adsetId, creativeRes.body.id);
       if (!adRes.ok || adRes.body.error) {
-        console.error(`[${label}] Ad creation failed for ${file.name}:`, adRes.body.error?.message);
+        console.error(`[${label}] Ad creation failed for ${file.name}:`, JSON.stringify(adRes.body.error));
         continue;
       }
 
@@ -256,7 +256,7 @@ async function processPhotoAccount(acc: AccountConfig) {
 
       const adRes = await createAd(acc.accountId, `${campaignName} — Ad`, adsetId, creativeRes.body.id);
       if (!adRes.ok || adRes.body.error) {
-        console.error(`[${label}] Ad creation failed for ${file.name}:`, adRes.body.error?.message);
+        console.error(`[${label}] Ad creation failed for ${file.name}:`, JSON.stringify(adRes.body.error));
         continue;
       }
 

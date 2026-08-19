@@ -82,14 +82,14 @@ async function launchOnAccount(acc: AccountConfig, videoFileId: string, campaign
 
   const creativeRes = await createAdCreative(acc.accountId, creativeBody);
   if (!creativeRes.ok || creativeRes.body.error) {
-    console.error(`[${label}] Creative creation failed:`, creativeRes.body.error?.message);
+    console.error(`[${label}] Creative creation failed:`, JSON.stringify(creativeRes.body.error));
     await sendTelegramMessage(`⚠️ <b>${label}</b>\nОшибка создания креатива: ${creativeRes.body.error?.message}`);
     return false;
   }
 
   const adRes = await createAd(acc.accountId, `${campaignName} — Ad`, adsetId, creativeRes.body.id);
   if (!adRes.ok || adRes.body.error) {
-    console.error(`[${label}] Ad creation failed:`, adRes.body.error?.message);
+    console.error(`[${label}] Ad creation failed:`, JSON.stringify(adRes.body.error));
     await sendTelegramMessage(`⚠️ <b>${label}</b>\nОшибка создания объявления: ${adRes.body.error?.message}`);
     return false;
   }
