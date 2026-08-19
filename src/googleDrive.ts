@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 
 const PARENT_FOLDER_ID = '18nzYWBFVrwUAgI1ZEQx5-oWPP4Gph2xH';
-const VIDEO_FOLDER_ID = '1eRh2qQUISFekyzYfoBJKyAFuABXYef3q';
+const VIDEO_FOLDER_ID = '1thTd9fjbniOiij8FUsiURZ-Zq8bWj9_t';
 const MACBOOK_FOLDER_ID = '1pPN1iwk4a5DS4FvOwcgj22XrJUOn_h2U';
 
 export async function getMacbookVideoFile(): Promise<DriveFile | null> {
