@@ -2,6 +2,12 @@ import { google } from 'googleapis';
 
 const PARENT_FOLDER_ID = '18nzYWBFVrwUAgI1ZEQx5-oWPP4Gph2xH';
 const VIDEO_FOLDER_ID = '1eRh2qQUISFekyzYfoBJKyAFuABXYef3q';
+const MACBOOK_FOLDER_ID = '1pPN1iwk4a5DS4FvOwcgj22XrJUOn_h2U';
+
+export async function getMacbookVideoFile(): Promise<DriveFile | null> {
+  const files = await listFilesInFolderSortedByNewest(MACBOOK_FOLDER_ID);
+  return files.length > 0 ? files[0] : null;
+}
 
 function getAuth() {
   const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;

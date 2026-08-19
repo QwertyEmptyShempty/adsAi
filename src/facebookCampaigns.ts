@@ -235,6 +235,52 @@ export function buildMultiLanguageVideoCreativeBody(
   };
 }
 
+export function buildTwoTierMultiLanguageVideoCreativeBody(
+  pageId: string,
+  primaryVideo: { id: string; thumb: string },
+  primaryLocaleIds: number[],
+  secondaryVideo: { id: string; thumb: string },
+  secondaryLocaleIds: number[],
+  destinationUrl: string,
+  title: string,
+  body: string,
+  name: string
+) {
+  const rules = [
+    ...primaryLocaleIds.map(localeId => ({
+      customization_spec: { locales: [localeId] },
+      title_label: { name: 'default' },
+      body_label: { name: 'default' },
+      video_label: { name: 'primary' },
+      link_url_label: { name: 'default' },
+    })),
+    ...secondaryLocaleIds.map(localeId => ({
+      customization_spec: { locales: [localeId] },
+      title_label: { name: 'default' },
+      body_label: { name: 'default' },
+      video_label: { name: 'secondary' },
+      link_url_label: { name: 'default' },
+    })),
+  ];
+
+  return {
+    name,
+    object_story_spec: { page_id: pageId },
+    asset_feed_spec: {
+      titles: [{ text: title, adlabels: [{ name: 'default' }] }],
+      bodies: [{ text: body, adlabels: [{ name: 'default' }] }],
+      videos: [
+        { video_id: primaryVideo.id, thumbnail_url: primaryVideo.thumb, adlabels: [{ name: 'primary' }] },
+        { video_id: secondaryVideo.id, thumbnail_url: secondaryVideo.thumb, adlabels: [{ name: 'secondary' }] },
+      ],
+      link_urls: [{ website_url: destinationUrl, adlabels: [{ name: 'default' }] }],
+      ad_formats: ['SINGLE_VIDEO'],
+      call_to_action_types: ['SUBSCRIBE'],
+      asset_customization_rules: rules,
+    },
+  };
+}
+
 export async function createAdCreative(accountId: string, body: object): Promise<FbResult<{ id: string; error?: any }>> {
   const token = process.env.FB_ACCESS_TOKEN;
   const res = await fetch(`https://graph.facebook.com/v19.0/act_${accountId}/adcreatives?access_token=${token}`, {
