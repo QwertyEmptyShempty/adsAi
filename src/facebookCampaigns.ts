@@ -88,7 +88,13 @@ export async function createAdset(
     optimization_goal: 'OFFSITE_CONVERSIONS',
     status: 'ACTIVE',
     promoted_object: JSON.stringify({ pixel_id: pixelId, custom_event_type: 'SUBSCRIBE' }),
-    targeting: JSON.stringify({ geo_locations: { countries: ['TR'] }, age_min: 18 }),
+    targeting: JSON.stringify({
+      geo_locations: { countries: ['TR'] },
+      age_min: 18,
+      age_max: 65,
+      targeting_relaxation_types: { lookalike: 0, custom_audience: 0 },
+      targeting_automation: { advantage_audience: 1 },
+    }),
   });
 }
 
