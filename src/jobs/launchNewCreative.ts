@@ -2,6 +2,7 @@ import { getActiveAccounts, AccountConfig } from '../config';
 import { findVideoFolder, listFilesInFolderSortedByNewest, downloadFileBuffer } from '../googleDrive';
 import {
   resolvePixelAndPage,
+  getOrCreatePageBackedInstagramAccount,
   createCampaign,
   createAdset,
   createAd,
@@ -44,6 +45,11 @@ async function launchOnAccount(acc: AccountConfig, videoFileId: string, campaign
     return false;
   }
 
+  const instagramUserId = await getOrCreatePageBackedInstagramAccount(pageId);
+  if (!instagramUserId) {
+    console.warn(`[${label}] No Instagram (page-backed) account available.`);
+  }
+
   const campaignRes = await createCampaign(acc.accountId, campaignName, acc.dailyBudgetMinorUnits);
   if (!campaignRes.ok || campaignRes.body.error) {
     console.error(`[${label}] Campaign creation failed:`, campaignRes.body.error?.message || campaignRes.status);
@@ -77,7 +83,7 @@ async function launchOnAccount(acc: AccountConfig, videoFileId: string, campaign
   }
   const thumb = (await getVideoThumbnail(videoRes.id)) || '';
   const creativeBody = localeIds.length > 0
-    ? buildMultiLanguageVideoCreativeBody(pageId, videoRes.id, thumb, destinationUrl, AD_TITLE, AD_BODY, localeIds, `${campaignName} — Creative`)
+    ? buildMultiLanguageVideoCreativeBody(pageId, videoRes.id, thumb, destinationUrl, AD_TITLE, AD_BODY, localeIds, `${campaignName} — Creative`, instagramUserId)
     : buildVideoCreativeBody(pageId, videoRes.id, thumb, destinationUrl, `${campaignName} — Creative`);
 
   const creativeRes = await createAdCreative(acc.accountId, creativeBody);

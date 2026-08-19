@@ -10,6 +10,7 @@ import {
 } from '../googleDrive';
 import {
   resolvePixelAndPage,
+  getOrCreatePageBackedInstagramAccount,
   createCampaign,
   createAdset,
   createAd,
@@ -112,6 +113,11 @@ async function processVideoAccount(
     return;
   }
 
+  const instagramUserId = await getOrCreatePageBackedInstagramAccount(pageId);
+  if (!instagramUserId) {
+    console.warn(`[${label}] No Instagram (page-backed) account available.`);
+  }
+
   const campaignRes = await createCampaign(acc.accountId, campaignName, acc.dailyBudgetMinorUnits);
   if (!campaignRes.ok || campaignRes.body.error) {
     console.error(`[${label}] Campaign creation failed:`, campaignRes.body.error || campaignRes.status);
@@ -151,7 +157,8 @@ async function processVideoAccount(
         destinationUrl,
         AD_TITLE,
         AD_BODY,
-        `${campaignName} — Creative ${i + 1}`
+        `${campaignName} — Creative ${i + 1}`,
+        instagramUserId
       );
 
       const creativeRes = await createAdCreative(acc.accountId, creativeBody);

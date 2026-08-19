@@ -94,8 +94,6 @@ export async function createAdset(
       age_max: 65,
       targeting_relaxation_types: { lookalike: 0, custom_audience: 0 },
       targeting_automation: { advantage_audience: 1 },
-      publisher_platforms: ['facebook'],
-      facebook_positions: ['feed', 'facebook_reels', 'video_feeds', 'marketplace', 'story', 'search'],
     }),
   });
 }
@@ -174,6 +172,19 @@ export async function getVideoThumbnail(videoId: string): Promise<string | null>
 
 // ---- Creative bodies (port of JS_Creative / JS_Creative_Image) ----
 
+export async function getOrCreatePageBackedInstagramAccount(pageId: string): Promise<string | null> {
+  const listRes = await fbGet<{ data?: { id: string }[]; error?: any }>(`/${pageId}/page_backed_instagram_accounts`, {});
+  if (listRes.ok && listRes.body.data && listRes.body.data.length > 0) {
+    return listRes.body.data[0].id;
+  }
+  const createRes = await fbPost<{ id?: string; error?: any }>(`/${pageId}/page_backed_instagram_accounts`, {});
+  if (createRes.ok && createRes.body.id) {
+    return createRes.body.id;
+  }
+  console.warn(`Could not get/create PBIA for page ${pageId}:`, JSON.stringify(createRes.body.error || listRes.body.error));
+  return null;
+}
+
 export function buildVideoCreativeBody(pageId: string, videoId: string, thumbUrl: string, destinationUrl: string, name: string) {
   return {
     name,
@@ -249,11 +260,12 @@ export function buildMultiLanguageVideoCreativeBody(
   title: string,
   body: string,
   localeIds: number[],
-  name: string
+  name: string,
+  instagramUserId: string | null
 ) {
   return {
     name,
-    object_story_spec: { page_id: pageId },
+    object_story_spec: instagramUserId ? { page_id: pageId, instagram_user_id: instagramUserId } : { page_id: pageId },
     asset_feed_spec: {
       titles: [{ text: title, adlabels: [{ name: 'default' }] }],
       bodies: [{ text: body, adlabels: [{ name: 'default' }] }],
@@ -291,7 +303,8 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
   destinationUrl: string,
   title: string,
   body: string,
-  name: string
+  name: string,
+  instagramUserId: string | null
 ) {
   const rules = [
     // First rule is flagged is_default:true -- Facebook requires exactly this pattern (a real rule,
@@ -322,7 +335,7 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
 
   return {
     name,
-    object_story_spec: { page_id: pageId },
+    object_story_spec: instagramUserId ? { page_id: pageId, instagram_user_id: instagramUserId } : { page_id: pageId },
     asset_feed_spec: {
       titles: [{ text: title, adlabels: [{ name: 'default' }] }],
       bodies: [{ text: body, adlabels: [{ name: 'default' }] }],
