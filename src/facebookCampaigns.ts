@@ -186,12 +186,30 @@ export function buildImageCreativeBody(pageId: string, imageHash: string, destin
   };
 }
 
+// Verified via live Graph API /search?type=adlocale testing on 19.08 -- Facebook stores locale
+// display names in the NATIVE language, so English names mostly fail to match. These numeric
+// IDs are confirmed stable and correct.
+const VERIFIED_LOCALE_IDS: Record<string, number> = {
+  Armenian: 68,
+  Malay: 41,
+  Filipino: 26,
+  German: 5,
+  Esperanto: 57,
+  Norwegian: 13,
+  Persian: 60,
+  'Traditional Chinese (Taiwan)': 22,
+  Turkish: 19,
+};
+
 export async function resolveAdLocaleId(languageName: string): Promise<number | null> {
+  if (languageName in VERIFIED_LOCALE_IDS) {
+    return VERIFIED_LOCALE_IDS[languageName];
+  }
+  // Fallback: live search for any language not in the verified table above.
   const res = await fbGet<{ data?: { key: number; name: string }[]; error?: any }>('/search', {
     type: 'adlocale',
     q: languageName,
   });
-  console.log(`[locale search] "${languageName}" ->`, JSON.stringify(res.body));
   const match = res.body.data?.[0];
   return match ? match.key : null;
 }
