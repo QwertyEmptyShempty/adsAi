@@ -261,13 +261,14 @@ export function buildMultiLanguageVideoCreativeBody(
       call_to_action_types: ['SUBSCRIBE'],
       asset_customization_rules: [
         {
-          customization_spec: {},
+          customization_spec: { locales: [localeIds[0]] },
           title_label: { name: 'default' },
           body_label: { name: 'default' },
           video_label: { name: 'default' },
           link_url_label: { name: 'default' },
+          is_default: true,
         },
-        ...localeIds.map(localeId => ({
+        ...localeIds.slice(1).map(localeId => ({
           customization_spec: { locales: [localeId] },
           title_label: { name: 'default' },
           body_label: { name: 'default' },
@@ -291,16 +292,17 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
   name: string
 ) {
   const rules = [
-    // Default/fallback rule: any locale not explicitly listed below gets the primary (MacBook) video.
-    // Facebook requires at least one rule with an empty customization_spec to act as this catch-all.
+    // First rule is flagged is_default:true -- Facebook requires exactly this pattern (a real rule,
+    // with its own locales, that ALSO acts as the fallback for any unmatched locale).
     {
-      customization_spec: {},
+      customization_spec: { locales: [primaryLocaleIds[0]] },
       title_label: { name: 'default' },
       body_label: { name: 'default' },
       video_label: { name: 'primary' },
       link_url_label: { name: 'default' },
+      is_default: true,
     },
-    ...primaryLocaleIds.map(localeId => ({
+    ...primaryLocaleIds.slice(1).map(localeId => ({
       customization_spec: { locales: [localeId] },
       title_label: { name: 'default' },
       body_label: { name: 'default' },
