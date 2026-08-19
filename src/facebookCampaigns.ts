@@ -94,6 +94,8 @@ export async function createAdset(
       age_max: 65,
       targeting_relaxation_types: { lookalike: 0, custom_audience: 0 },
       targeting_automation: { advantage_audience: 1 },
+      publisher_platforms: ['facebook'],
+      facebook_positions: ['feed', 'facebook_reels', 'video_feeds', 'marketplace', 'story', 'search'],
     }),
   });
 }
