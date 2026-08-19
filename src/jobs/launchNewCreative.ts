@@ -9,9 +9,15 @@ import {
   waitForVideoReady,
   getVideoThumbnail,
   buildVideoCreativeBody,
+  buildMultiLanguageVideoCreativeBody,
+  resolveAdLocaleIds,
   createAdCreative,
 } from '../facebookCampaigns';
 import { sendTelegramMessage } from '../telegram';
+
+const AD_LANGUAGES = ['Armenian', 'Malay', 'Filipino', 'German', 'Esperanto', 'Norwegian', 'Persian', 'Traditional Chinese (Taiwan)', 'Turkish'];
+const AD_TITLE = 'MacBook Air с чипом M5';
+const AD_BODY = 'Чип M5 — это не просто обновление. Это другой уровень скорости: повседневные задачи, монтаж, работа с ИИ — всё летает. До 18 часов автономной работы, чтобы вы закрывали крышку только когда сами захотите.\nНевероятно тонкий и лёгкий алюминиевый корпус. Яркий Liquid Retina дисплей. Камера Center Stage, которая всегда держит вас в кадре. 16 ГБ унифицированной памяти и 512 ГБ накопителя уже в базовой комплектации.';
 
 function buildCampaignName(label: string): string {
   const now = new Date();
@@ -20,7 +26,7 @@ function buildCampaignName(label: string): string {
   return `${dateStr} Новый крео ${timeStr} — ${label}`;
 }
 
-async function launchOnAccount(acc: AccountConfig, videoFileId: string, campaignNamePrefix: string) {
+async function launchOnAccount(acc: AccountConfig, videoFileId: string, campaignNamePrefix: string, localeIds: number[]) {
   const label = acc.label;
   const campaignName = buildCampaignName(label);
 
@@ -68,7 +74,9 @@ async function launchOnAccount(acc: AccountConfig, videoFileId: string, campaign
     return false;
   }
   const thumb = (await getVideoThumbnail(videoRes.id)) || '';
-  const creativeBody = buildVideoCreativeBody(pageId, videoRes.id, thumb, destinationUrl, `${campaignName} — Creative`);
+  const creativeBody = localeIds.length > 0
+    ? buildMultiLanguageVideoCreativeBody(pageId, videoRes.id, thumb, destinationUrl, AD_TITLE, AD_BODY, localeIds, `${campaignName} — Creative`)
+    : buildVideoCreativeBody(pageId, videoRes.id, thumb, destinationUrl, `${campaignName} — Creative`);
 
   const creativeRes = await createAdCreative(acc.accountId, creativeBody);
   if (!creativeRes.ok || creativeRes.body.error) {
@@ -89,6 +97,15 @@ async function launchOnAccount(acc: AccountConfig, videoFileId: string, campaign
 }
 
 async function main() {
+  console.log('Resolving ad locale IDs for multi-language ads...');
+  const resolved = await resolveAdLocaleIds(AD_LANGUAGES);
+  const missing = resolved.filter(r => r.id === null).map(r => r.name);
+  if (missing.length > 0) {
+    console.warn('Could not resolve locale IDs for:', missing.join(', '));
+  }
+  const localeIds = resolved.filter(r => r.id !== null).map(r => r.id as number);
+  console.log(`Resolved ${localeIds.length}/${AD_LANGUAGES.length} locale IDs.`);
+
   const folder = await findVideoFolder();
   if (!folder) {
     console.error('No video folder found.');
@@ -108,7 +125,7 @@ async function main() {
   let successCount = 0;
   for (const acc of accounts) {
     try {
-      const ok = await launchOnAccount(acc, newest.id, newest.name);
+      const ok = await launchOnAccount(acc, newest.id, newest.name, localeIds);
       if (ok) successCount++;
     } catch (err) {
       console.error(`[${acc.label}] Unexpected error:`, err);
