@@ -259,13 +259,22 @@ export function buildMultiLanguageVideoCreativeBody(
       link_urls: [{ website_url: destinationUrl, adlabels: [{ name: 'default' }] }],
       ad_formats: ['SINGLE_VIDEO'],
       call_to_action_types: ['SUBSCRIBE'],
-      asset_customization_rules: localeIds.map(localeId => ({
-        customization_spec: { locales: [localeId] },
-        title_label: { name: 'default' },
-        body_label: { name: 'default' },
-        video_label: { name: 'default' },
-        link_url_label: { name: 'default' },
-      })),
+      asset_customization_rules: [
+        {
+          customization_spec: {},
+          title_label: { name: 'default' },
+          body_label: { name: 'default' },
+          video_label: { name: 'default' },
+          link_url_label: { name: 'default' },
+        },
+        ...localeIds.map(localeId => ({
+          customization_spec: { locales: [localeId] },
+          title_label: { name: 'default' },
+          body_label: { name: 'default' },
+          video_label: { name: 'default' },
+          link_url_label: { name: 'default' },
+        })),
+      ],
     },
   };
 }
@@ -282,6 +291,15 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
   name: string
 ) {
   const rules = [
+    // Default/fallback rule: any locale not explicitly listed below gets the primary (MacBook) video.
+    // Facebook requires at least one rule with an empty customization_spec to act as this catch-all.
+    {
+      customization_spec: {},
+      title_label: { name: 'default' },
+      body_label: { name: 'default' },
+      video_label: { name: 'primary' },
+      link_url_label: { name: 'default' },
+    },
     ...primaryLocaleIds.map(localeId => ({
       customization_spec: { locales: [localeId] },
       title_label: { name: 'default' },
