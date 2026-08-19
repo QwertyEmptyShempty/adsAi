@@ -304,8 +304,9 @@ async function main() {
   console.log(`Resolved ${otherLocaleIds.length}/${AD_LANGUAGES.length} other locale IDs, Turkish=${turkishLocaleId}.`);
 
   const accounts = getActiveAccounts();
-  console.log(`Starting auto-launch run for ${accounts.length} active accounts...`);
-  for (const acc of accounts) {
+  const testAccounts = process.env.TEST_SINGLE_ACCOUNT === 'true' ? accounts.slice(0, 1) : accounts;
+  console.log(`Starting auto-launch run for ${testAccounts.length} active accounts...`);
+  for (const acc of testAccounts) {
     try {
       await processAccount(acc, otherLocaleIds, turkishLocaleId);
     } catch (err) {
