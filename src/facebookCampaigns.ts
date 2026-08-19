@@ -275,12 +275,15 @@ export function buildMultiLanguageVideoCreativeBody(
   name: string,
   instagramUserId: string | null
 ) {
+  const titleLabel = (localeId: number) => `title_${localeId}`;
+  const bodyLabel = (localeId: number) => `body_${localeId}`;
+
   return {
     name,
     object_story_spec: instagramUserId ? { page_id: pageId, instagram_user_id: instagramUserId } : { page_id: pageId },
     asset_feed_spec: {
-      titles: [{ text: title, adlabels: [{ name: 'default' }] }],
-      bodies: [{ text: body, adlabels: [{ name: 'default' }] }],
+      titles: localeIds.map(localeId => ({ text: title, adlabels: [{ name: titleLabel(localeId) }] })),
+      bodies: localeIds.map(localeId => ({ text: body, adlabels: [{ name: bodyLabel(localeId) }] })),
       videos: [{ video_id: videoId, thumbnail_url: thumbUrl, adlabels: [{ name: 'default' }] }],
       link_urls: [{ website_url: destinationUrl, adlabels: [{ name: 'default' }] }],
       ad_formats: ['SINGLE_VIDEO'],
@@ -288,16 +291,16 @@ export function buildMultiLanguageVideoCreativeBody(
       asset_customization_rules: [
         {
           customization_spec: { locales: [localeIds[0]] },
-          title_label: { name: 'default' },
-          body_label: { name: 'default' },
+          title_label: { name: titleLabel(localeIds[0]) },
+          body_label: { name: bodyLabel(localeIds[0]) },
           video_label: { name: 'default' },
           link_url_label: { name: 'default' },
           is_default: true,
         },
         ...localeIds.slice(1).map(localeId => ({
           customization_spec: { locales: [localeId] },
-          title_label: { name: 'default' },
-          body_label: { name: 'default' },
+          title_label: { name: titleLabel(localeId) },
+          body_label: { name: bodyLabel(localeId) },
           video_label: { name: 'default' },
           link_url_label: { name: 'default' },
         })),
@@ -318,28 +321,32 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
   name: string,
   instagramUserId: string | null
 ) {
+  const allLocaleIds = [...primaryLocaleIds, ...secondaryLocaleIds];
+  const titleLabel = (localeId: number) => `title_${localeId}`;
+  const bodyLabel = (localeId: number) => `body_${localeId}`;
+
   const rules = [
     // First rule is flagged is_default:true -- Facebook requires exactly this pattern (a real rule,
     // with its own locales, that ALSO acts as the fallback for any unmatched locale).
     {
       customization_spec: { locales: [primaryLocaleIds[0]] },
-      title_label: { name: 'default' },
-      body_label: { name: 'default' },
+      title_label: { name: titleLabel(primaryLocaleIds[0]) },
+      body_label: { name: bodyLabel(primaryLocaleIds[0]) },
       video_label: { name: 'primary' },
       link_url_label: { name: 'default' },
       is_default: true,
     },
     ...primaryLocaleIds.slice(1).map(localeId => ({
       customization_spec: { locales: [localeId] },
-      title_label: { name: 'default' },
-      body_label: { name: 'default' },
+      title_label: { name: titleLabel(localeId) },
+      body_label: { name: bodyLabel(localeId) },
       video_label: { name: 'primary' },
       link_url_label: { name: 'default' },
     })),
     ...secondaryLocaleIds.map(localeId => ({
       customization_spec: { locales: [localeId] },
-      title_label: { name: 'default' },
-      body_label: { name: 'default' },
+      title_label: { name: titleLabel(localeId) },
+      body_label: { name: bodyLabel(localeId) },
       video_label: { name: 'secondary' },
       link_url_label: { name: 'default' },
     })),
@@ -349,8 +356,8 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
     name,
     object_story_spec: instagramUserId ? { page_id: pageId, instagram_user_id: instagramUserId } : { page_id: pageId },
     asset_feed_spec: {
-      titles: [{ text: title, adlabels: [{ name: 'default' }] }],
-      bodies: [{ text: body, adlabels: [{ name: 'default' }] }],
+      titles: allLocaleIds.map(localeId => ({ text: title, adlabels: [{ name: titleLabel(localeId) }] })),
+      bodies: allLocaleIds.map(localeId => ({ text: body, adlabels: [{ name: bodyLabel(localeId) }] })),
       videos: [
         { video_id: primaryVideo.id, thumbnail_url: primaryVideo.thumb, adlabels: [{ name: 'primary' }] },
         { video_id: secondaryVideo.id, thumbnail_url: secondaryVideo.thumb, adlabels: [{ name: 'secondary' }] },
