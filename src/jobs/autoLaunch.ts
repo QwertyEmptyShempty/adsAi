@@ -1,5 +1,5 @@
 import { getActiveAccounts, AccountConfig } from '../config';
-import { nextMediaType, getCachedMacbookVideo, setCachedMacbookVideo } from '../mediaState';
+import { nextMediaType, getCachedVideo, setCachedVideo } from '../mediaState';
 import {
   findCandidateFolders,
   pickLatestFolder,
@@ -128,7 +128,7 @@ async function processVideoAccount(
 
   // Upload the MacBook (shared) video once per account -- reuse cached video_id if we've
   // already uploaded this exact file for this account before (avoids redundant uploads).
-  let macbookUpload = await getCachedMacbookVideo(acc.accountId, macbookFile.id);
+  let macbookUpload = await getCachedVideo(acc.accountId, macbookFile.id);
   if (macbookUpload) {
     console.log(`[${label}] Reusing cached MacBook video (${macbookUpload.id}).`);
   } else {
@@ -137,7 +137,7 @@ async function processVideoAccount(
       await sendTelegramMessage(`⚠️ <b>${label}</b>\nНе удалось загрузить видео MacBook.`);
       return;
     }
-    await setCachedMacbookVideo(acc.accountId, macbookFile.id, macbookUpload);
+    await setCachedVideo(acc.accountId, macbookFile.id, macbookUpload);
   }
 
   let successCount = 0;
@@ -152,8 +152,14 @@ async function processVideoAccount(
       }
       const adsetId = adsetRes.body.id;
 
-      const turkishUpload = await uploadVideoAndWait(acc.accountId, file, label, `turkish ${i + 1}`);
-      if (!turkishUpload) continue;
+      let turkishUpload = await getCachedVideo(acc.accountId, file.id);
+      if (turkishUpload) {
+        console.log(`[${label}] Reusing cached video for ${file.name} (${turkishUpload.id}).`);
+      } else {
+        turkishUpload = await uploadVideoAndWait(acc.accountId, file, label, `turkish ${i + 1}`);
+        if (!turkishUpload) continue;
+        await setCachedVideo(acc.accountId, file.id, turkishUpload);
+      }
 
       const creativeBody = buildTwoTierMultiLanguageVideoCreativeBody(
         pageId,

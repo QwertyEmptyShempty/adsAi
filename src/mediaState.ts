@@ -40,13 +40,15 @@ export async function closeRedis(): Promise<void> {
   }
 }
 
-// Cache the shared MacBook video's Facebook video_id + thumbnail per account, so we don't
+// Cache ANY uploaded video's Facebook video_id + thumbnail per account+file, so we don't
 // re-upload the exact same file on every run (avoids redundant uploads and processing-queue congestion).
-const MACBOOK_CACHE_PREFIX = 'macbookVideo:';
+// Videos already uploaded stay in the ad account's video library on Facebook's side --
+// we just need to remember the video_id ourselves to reuse it instead of uploading a fresh copy.
+const VIDEO_CACHE_PREFIX = 'videoCache:';
 
-export async function getCachedMacbookVideo(accountId: string, fileId: string): Promise<{ id: string; thumb: string } | null> {
+export async function getCachedVideo(accountId: string, fileId: string): Promise<{ id: string; thumb: string } | null> {
   const redis = getClient();
-  const raw = await redis.get(`${MACBOOK_CACHE_PREFIX}${accountId}:${fileId}`);
+  const raw = await redis.get(`${VIDEO_CACHE_PREFIX}${accountId}:${fileId}`);
   if (!raw) return null;
   try {
     return JSON.parse(raw);
@@ -55,8 +57,12 @@ export async function getCachedMacbookVideo(accountId: string, fileId: string): 
   }
 }
 
-export async function setCachedMacbookVideo(accountId: string, fileId: string, video: { id: string; thumb: string }): Promise<void> {
+export async function setCachedVideo(accountId: string, fileId: string, video: { id: string; thumb: string }): Promise<void> {
   const redis = getClient();
   // Expire after 45 days -- Facebook video IDs can eventually become invalid/removed; force a re-upload periodically.
-  await redis.set(`${MACBOOK_CACHE_PREFIX}${accountId}:${fileId}`, JSON.stringify(video), 'EX', 45 * 24 * 60 * 60);
+  await redis.set(`${VIDEO_CACHE_PREFIX}${accountId}:${fileId}`, JSON.stringify(video), 'EX', 45 * 24 * 60 * 60);
 }
+
+// Backwards-compatible aliases (macbook is just one specific video like any other now)
+export const getCachedMacbookVideo = getCachedVideo;
+export const setCachedMacbookVideo = setCachedVideo;
