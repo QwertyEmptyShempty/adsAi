@@ -9,6 +9,7 @@
     "auto-launch": "node dist/jobs/autoLaunch.js",
     "launch-new-creative": "node dist/jobs/launchNewCreative.js",
     "debug-locales": "node dist/jobs/debugLocales.js",
+    "fill-pages": "node dist/jobs/fillPages.js",
     "dev:auto-pause": "ts-node src/jobs/autoPause.ts",
     "dev:auto-launch": "ts-node src/jobs/autoLaunch.ts",
     "dev:launch-new-creative": "ts-node src/jobs/launchNewCreative.ts"
