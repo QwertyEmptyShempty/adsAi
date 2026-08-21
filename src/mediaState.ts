@@ -66,3 +66,17 @@ export async function setCachedVideo(accountId: string, fileId: string, video: {
 // Backwards-compatible aliases (macbook is just one specific video like any other now)
 export const getCachedMacbookVideo = getCachedVideo;
 export const setCachedMacbookVideo = setCachedVideo;
+
+// Distributed lock: prevents two overlapping runs of the same job (e.g. a manual Trigger Run
+// firing while the scheduled run is still in progress) from hammering Facebook's video upload
+// pipeline simultaneously with the same token, which causes processing timeouts for everyone.
+export async function acquireRunLock(lockName: string, ttlSeconds = 1800): Promise<boolean> {
+  const redis = getClient();
+  const result = await redis.set(`runLock:${lockName}`, '1', 'EX', ttlSeconds, 'NX');
+  return result === 'OK';
+}
+
+export async function releaseRunLock(lockName: string): Promise<void> {
+  const redis = getClient();
+  await redis.del(`runLock:${lockName}`);
+}

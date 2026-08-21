@@ -1,5 +1,5 @@
 import { getActiveAccounts, AccountConfig } from '../config';
-import { nextMediaType, getCachedVideo, setCachedVideo } from '../mediaState';
+import { nextMediaType, getCachedVideo, setCachedVideo, acquireRunLock, releaseRunLock } from '../mediaState';
 import {
   findCandidateFolders,
   pickLatestFolder,
@@ -307,40 +307,50 @@ async function main() {
     return;
   }
 
-  console.log('Resolving ad locale IDs for multi-language ads...');
-  const resolvedOthers = await resolveAdLocaleIds(AD_LANGUAGES);
-  const resolvedTurkish = await resolveAdLocaleIds([TURKISH_LANGUAGE]);
+  const gotLock = await acquireRunLock('auto-launch', 1800); // 30 min TTL, safety net if the process crashes
+  if (!gotLock) {
+    console.log('Another auto-launch run is already in progress — skipping this run to avoid overlap.');
+    return;
+  }
 
-  const missing = resolvedOthers.filter(r => r.id === null).map(r => r.name);
-  if (missing.length > 0) {
-    console.warn('Could not resolve locale IDs for:', missing.join(', '));
-    await sendTelegramMessage(`⚠️ Не удалось найти ID локали для: ${missing.join(', ')}`);
-  }
-  const otherLocaleIds = resolvedOthers.filter(r => r.id !== null).map(r => r.id as number);
-  const turkishLocaleId = resolvedTurkish[0]?.id ?? null;
-  if (turkishLocaleId === null) {
-    console.warn('Could not resolve Turkish locale ID!');
-    await sendTelegramMessage('⚠️ Не удалось найти ID турецкой локали.');
-  }
-  console.log(`Resolved ${otherLocaleIds.length}/${AD_LANGUAGES.length} other locale IDs, Turkish=${turkishLocaleId}.`);
+  try {
+    console.log('Resolving ad locale IDs for multi-language ads...');
+    const resolvedOthers = await resolveAdLocaleIds(AD_LANGUAGES);
+    const resolvedTurkish = await resolveAdLocaleIds([TURKISH_LANGUAGE]);
 
-  const accounts = getActiveAccounts();
-  let testAccounts = accounts;
-  if (process.env.TEST_ACCOUNT_ID) {
-    testAccounts = accounts.filter(a => a.accountId === process.env.TEST_ACCOUNT_ID);
-  } else if (process.env.TEST_SINGLE_ACCOUNT === 'true') {
-    testAccounts = accounts.slice(0, 1);
-  }
-  console.log(`Starting auto-launch run for ${testAccounts.length} active accounts...`);
-  for (const acc of testAccounts) {
-    try {
-      await processAccount(acc, otherLocaleIds, turkishLocaleId);
-    } catch (err) {
-      console.error(`Account ${acc.label} (${acc.accountId}) failed entirely:`, err);
-      await sendTelegramMessage(`⚠️ <b>${acc.label}</b>\nЗапуск полностью упал: ${err}`);
+    const missing = resolvedOthers.filter(r => r.id === null).map(r => r.name);
+    if (missing.length > 0) {
+      console.warn('Could not resolve locale IDs for:', missing.join(', '));
+      await sendTelegramMessage(`⚠️ Не удалось найти ID локали для: ${missing.join(', ')}`);
     }
+    const otherLocaleIds = resolvedOthers.filter(r => r.id !== null).map(r => r.id as number);
+    const turkishLocaleId = resolvedTurkish[0]?.id ?? null;
+    if (turkishLocaleId === null) {
+      console.warn('Could not resolve Turkish locale ID!');
+      await sendTelegramMessage('⚠️ Не удалось найти ID турецкой локали.');
+    }
+    console.log(`Resolved ${otherLocaleIds.length}/${AD_LANGUAGES.length} other locale IDs, Turkish=${turkishLocaleId}.`);
+
+    const accounts = getActiveAccounts();
+    let testAccounts = accounts;
+    if (process.env.TEST_ACCOUNT_ID) {
+      testAccounts = accounts.filter(a => a.accountId === process.env.TEST_ACCOUNT_ID);
+    } else if (process.env.TEST_SINGLE_ACCOUNT === 'true') {
+      testAccounts = accounts.slice(0, 1);
+    }
+    console.log(`Starting auto-launch run for ${testAccounts.length} active accounts...`);
+    for (const acc of testAccounts) {
+      try {
+        await processAccount(acc, otherLocaleIds, turkishLocaleId);
+      } catch (err) {
+        console.error(`Account ${acc.label} (${acc.accountId}) failed entirely:`, err);
+        await sendTelegramMessage(`⚠️ <b>${acc.label}</b>\nЗапуск полностью упал: ${err}`);
+      }
+    }
+    console.log('Auto-launch run complete.');
+  } finally {
+    await releaseRunLock('auto-launch');
   }
-  console.log('Auto-launch run complete.');
 }
 
 main().catch(err => {
