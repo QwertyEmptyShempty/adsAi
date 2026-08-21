@@ -13,7 +13,7 @@ export interface AccountConfig {
   notes?: string;
 }
 
-export const FINANS_DUNYASI_PAGE_ID = '162691913591302';
+export const FINANS_DUNYASI_PAGE_ID = '1264696190059959';
 
 export const accounts: AccountConfig[] = [
   { accountId: '1785894395737168', label: 'ADAP 6', active: false, destinationUrl: '', preferredPixelId: '1062674762977615', preferredPageId: null, dailyBudgetMinorUnits: 6000, notes: 'Disabled by Facebook (error_subcode 1885316) - confirmed 17.08' },
