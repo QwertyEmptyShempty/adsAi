@@ -1,5 +1,5 @@
 import { getActiveAccounts, AccountConfig } from '../config';
-import { nextMediaType } from '../mediaState';
+import { nextMediaType, getCachedMacbookVideo, setCachedMacbookVideo } from '../mediaState';
 import {
   findCandidateFolders,
   pickLatestFolder,
@@ -126,11 +126,18 @@ async function processVideoAccount(
   }
   const campaignId = campaignRes.body.id;
 
-  // Upload the MacBook (shared) video once for this campaign
-  const macbookUpload = await uploadVideoAndWait(acc.accountId, macbookFile, label, 'macbook (shared)');
-  if (!macbookUpload) {
-    await sendTelegramMessage(`⚠️ <b>${label}</b>\nНе удалось загрузить видео MacBook.`);
-    return;
+  // Upload the MacBook (shared) video once per account -- reuse cached video_id if we've
+  // already uploaded this exact file for this account before (avoids redundant uploads).
+  let macbookUpload = await getCachedMacbookVideo(acc.accountId, macbookFile.id);
+  if (macbookUpload) {
+    console.log(`[${label}] Reusing cached MacBook video (${macbookUpload.id}).`);
+  } else {
+    macbookUpload = await uploadVideoAndWait(acc.accountId, macbookFile, label, 'macbook (shared)');
+    if (!macbookUpload) {
+      await sendTelegramMessage(`⚠️ <b>${label}</b>\nНе удалось загрузить видео MacBook.`);
+      return;
+    }
+    await setCachedMacbookVideo(acc.accountId, macbookFile.id, macbookUpload);
   }
 
   let successCount = 0;
