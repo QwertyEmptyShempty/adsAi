@@ -49,6 +49,19 @@ function buildCampaignName(scheme: string, label: string): string {
   return `${dateStr} Авто ${scheme} ${timeStr} — ${label}`;
 }
 
+// Runs `worker` over `items` with at most `concurrency` running at once, instead of one at a time.
+async function runWithConcurrency<T>(items: T[], concurrency: number, worker: (item: T, index: number) => Promise<void>): Promise<void> {
+  let nextIndex = 0;
+  async function runNext(): Promise<void> {
+    const i = nextIndex++;
+    if (i >= items.length) return;
+    await worker(items[i], i);
+    await runNext();
+  }
+  const runners = Array.from({ length: Math.min(concurrency, items.length) }, () => runNext());
+  await Promise.all(runners);
+}
+
 async function uploadVideoAndWait(accountId: string, file: DriveFile, label: string, tag: string): Promise<{ id: string; thumb: string } | null> {
   console.log(`[${label}] Downloading ${file.name} (${tag}) from Drive...`);
   const buffer = await downloadFileBuffer(file.id);
@@ -142,13 +155,12 @@ async function processVideoAccount(
 
   let successCount = 0;
 
-  for (let i = 0; i < usableFiles.length; i++) {
-    const file = usableFiles[i];
+  await runWithConcurrency(usableFiles, 3, async (file, i) => {
     try {
       const adsetRes = await createAdset(acc.accountId, campaignId, `${campaignName} — Adset ${i + 1}`, pixelId);
       if (!adsetRes.ok || adsetRes.body.error) {
         console.error(`[${label}] Adset ${i + 1} creation failed:`, adsetRes.body.error?.message);
-        continue;
+        return;
       }
       const adsetId = adsetRes.body.id;
 
@@ -157,13 +169,13 @@ async function processVideoAccount(
         console.log(`[${label}] Reusing cached video for ${file.name} (${turkishUpload.id}).`);
       } else {
         turkishUpload = await uploadVideoAndWait(acc.accountId, file, label, `turkish ${i + 1}`);
-        if (!turkishUpload) continue;
+        if (!turkishUpload) return;
         await setCachedVideo(acc.accountId, file.id, turkishUpload);
       }
 
       const creativeBody = buildTwoTierMultiLanguageVideoCreativeBody(
         pageId,
-        macbookUpload,
+        macbookUpload!,
         otherLocaleIds,
         turkishUpload,
         turkishLocaleId !== null ? [turkishLocaleId] : [],
@@ -177,20 +189,20 @@ async function processVideoAccount(
       const creativeRes = await createAdCreative(acc.accountId, creativeBody);
       if (!creativeRes.ok || creativeRes.body.error) {
         console.error(`[${label}] Creative creation failed for ${file.name}:`, JSON.stringify(creativeRes.body.error));
-        continue;
+        return;
       }
 
       const adRes = await createAd(acc.accountId, `${campaignName} — Ad`, adsetId, creativeRes.body.id);
       if (!adRes.ok || adRes.body.error) {
         console.error(`[${label}] Ad creation failed for ${file.name}:`, JSON.stringify(adRes.body.error));
-        continue;
+        return;
       }
 
       successCount++;
     } catch (err) {
       console.error(`[${label}] Unexpected error on creative ${i + 1}:`, err);
     }
-  }
+  });
 
   console.log(`[${label}] Done: ${successCount}/${usableFiles.length} adsets created in campaign "${campaignName}"`);
   await sendTelegramMessage(
@@ -339,14 +351,14 @@ async function main() {
       testAccounts = accounts.slice(0, 1);
     }
     console.log(`Starting auto-launch run for ${testAccounts.length} active accounts...`);
-    for (const acc of testAccounts) {
+    await runWithConcurrency(testAccounts, 3, async (acc) => {
       try {
         await processAccount(acc, otherLocaleIds, turkishLocaleId);
       } catch (err) {
         console.error(`Account ${acc.label} (${acc.accountId}) failed entirely:`, err);
         await sendTelegramMessage(`⚠️ <b>${acc.label}</b>\nЗапуск полностью упал: ${err}`);
       }
-    }
+    });
     console.log('Auto-launch run complete.');
   } finally {
     await releaseRunLock('auto-launch');
