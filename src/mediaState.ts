@@ -80,3 +80,21 @@ export async function releaseRunLock(lockName: string): Promise<void> {
   const redis = getClient();
   await redis.del(`runLock:${lockName}`);
 }
+
+// Alternates the video campaign structure per account: 1-5-1 (5 separate adsets, 1 ad each)
+// vs 1-1-5 (1 shared adset, 5 ads). Same alternation pattern as photo/video media type.
+const SCHEME_KEY_PREFIX = 'lastScheme:';
+
+export async function getLastScheme(accountId: string): Promise<'1-5-1' | '1-1-5' | null> {
+  const redis = getClient();
+  const val = await redis.get(SCHEME_KEY_PREFIX + accountId);
+  return val === '1-5-1' || val === '1-1-5' ? val : null;
+}
+
+export async function nextScheme(accountId: string): Promise<'1-5-1' | '1-1-5'> {
+  const last = await getLastScheme(accountId);
+  const next: '1-5-1' | '1-1-5' = last === '1-5-1' ? '1-1-5' : '1-5-1';
+  const redis = getClient();
+  await redis.set(SCHEME_KEY_PREFIX + accountId, next);
+  return next;
+}

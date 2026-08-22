@@ -1,5 +1,5 @@
 import { getActiveAccounts, AccountConfig } from '../config';
-import { nextMediaType, getCachedVideo, setCachedVideo, acquireRunLock, releaseRunLock } from '../mediaState';
+import { nextMediaType, nextScheme, getCachedVideo, setCachedVideo, acquireRunLock, releaseRunLock } from '../mediaState';
 import {
   findCandidateFolders,
   pickLatestFolder,
@@ -109,8 +109,9 @@ async function processVideoAccount(
     return;
   }
 
-  const campaignName = buildCampaignName('1-5-1', label);
-  console.log(`[${label}] video, folder="${folder.name}", ${usableFiles.length} creatives (all used), scheme=1-5-1`);
+  const scheme = await nextScheme(acc.accountId);
+  const campaignName = buildCampaignName(scheme, label);
+  console.log(`[${label}] video, folder="${folder.name}", ${usableFiles.length} creatives (all used), scheme=${scheme}`);
 
   const { pixelId, pixelWarning, pageId, pageWarning, destinationUrl } = await resolvePixelAndPage(
     acc.accountId,
@@ -153,16 +154,33 @@ async function processVideoAccount(
     await setCachedVideo(acc.accountId, macbookFile.id, macbookUpload);
   }
 
+  // 1-1-5: one shared adset for all 5 ads. 1-5-1: each file gets its own adset (created inside the loop below).
+  let sharedAdsetId: string | null = null;
+  if (scheme === '1-1-5') {
+    const adsetRes = await createAdset(acc.accountId, campaignId, `${campaignName} — Adset`, pixelId);
+    if (!adsetRes.ok || adsetRes.body.error) {
+      console.error(`[${label}] Shared adset creation failed:`, adsetRes.body.error?.message);
+      await sendTelegramMessage(`⚠️ <b>${label}</b>\nОшибка создания адсета: ${adsetRes.body.error?.message}`);
+      return;
+    }
+    sharedAdsetId = adsetRes.body.id;
+  }
+
   let successCount = 0;
 
   await runWithConcurrency(usableFiles, 3, async (file, i) => {
     try {
-      const adsetRes = await createAdset(acc.accountId, campaignId, `${campaignName} — Adset ${i + 1}`, pixelId);
-      if (!adsetRes.ok || adsetRes.body.error) {
-        console.error(`[${label}] Adset ${i + 1} creation failed:`, adsetRes.body.error?.message);
-        return;
+      let adsetId: string;
+      if (scheme === '1-1-5') {
+        adsetId = sharedAdsetId!;
+      } else {
+        const adsetRes = await createAdset(acc.accountId, campaignId, `${campaignName} — Adset ${i + 1}`, pixelId);
+        if (!adsetRes.ok || adsetRes.body.error) {
+          console.error(`[${label}] Adset ${i + 1} creation failed:`, adsetRes.body.error?.message);
+          return;
+        }
+        adsetId = adsetRes.body.id;
       }
-      const adsetId = adsetRes.body.id;
 
       let turkishUpload = await getCachedVideo(acc.accountId, file.id);
       if (turkishUpload) {
@@ -192,7 +210,7 @@ async function processVideoAccount(
         return;
       }
 
-      const adRes = await createAd(acc.accountId, `${campaignName} — Ad`, adsetId, creativeRes.body.id);
+      const adRes = await createAd(acc.accountId, `${campaignName} — Ad ${i + 1}`, adsetId, creativeRes.body.id);
       if (!adRes.ok || adRes.body.error) {
         console.error(`[${label}] Ad creation failed for ${file.name}:`, JSON.stringify(adRes.body.error));
         return;
@@ -204,9 +222,9 @@ async function processVideoAccount(
     }
   });
 
-  console.log(`[${label}] Done: ${successCount}/${usableFiles.length} adsets created in campaign "${campaignName}"`);
+  console.log(`[${label}] Done: ${successCount}/${usableFiles.length} ads created in campaign "${campaignName}" (scheme ${scheme})`);
   await sendTelegramMessage(
-    `✅ <b>${campaignName}</b>\nАккаунт: ${label}\nУспешно: ${successCount} из ${usableFiles.length} (MacBook + свой турецкий креатив в каждом)`
+    `✅ <b>${campaignName}</b>\nАккаунт: ${label}\nСхема: ${scheme}\nУспешно: ${successCount} из ${usableFiles.length} (MacBook + свой турецкий креатив в каждом)`
   );
 }
 
