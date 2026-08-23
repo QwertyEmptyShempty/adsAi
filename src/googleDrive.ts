@@ -55,7 +55,10 @@ export async function findCandidateFolders(): Promise<{ videoFolders: DriveFolde
     fields: 'files(id,name,createdTime)',
     pageSize: 200,
   });
-  const photoFolders = (res.data.files || []) as DriveFolder[];
+  const allFolders = (res.data.files || []) as DriveFolder[];
+  // Only real daily-generated batches have a time (HH:mm) in the name, e.g. "23.08 09:00 Адапты Турция".
+  // Folders without a time (e.g. "23.08 Адапты Турция") are stale/wrong and must be excluded.
+  const photoFolders = allFolders.filter(f => /\d{1,2}:\d{2}/.test(f.name));
   const videoFolders: DriveFolder[] = [
     { id: VIDEO_FOLDER_ID, name: 'Видео (fixed)', createdTime: new Date().toISOString() },
   ];
