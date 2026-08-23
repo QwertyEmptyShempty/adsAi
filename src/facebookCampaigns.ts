@@ -240,6 +240,16 @@ const VERIFIED_LOCALE_IDS: Record<string, number> = {
   Persian: 60,
   'Traditional Chinese (Taiwan)': 22,
   Turkish: 19,
+  // Verified 23.08 for photo campaigns (native-language query strings, same pattern as above)
+  Gaeilge: 64,
+  नेपाली: 82,
+  Čeština: 2,
+  Kiswahili: 88,
+  Српски: 42,
+  Hrvatski: 38,
+  मराठी: 81,
+  'Bahasa Melayu': 41,
+  Türkçe: 19,
 };
 
 export async function resolveAdLocaleId(languageName: string): Promise<number | null> {
