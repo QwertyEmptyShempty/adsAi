@@ -398,7 +398,14 @@ async function processAccount(
   photoOtherLocaleIds: number[],
   photoTurkishLocaleId: number | null
 ) {
-  const mediaType = process.env.FORCE_VIDEO === 'true' ? 'video' : await nextMediaType(acc.accountId);
+  let mediaType: 'photo' | 'video';
+  if (process.env.FORCE_VIDEO === 'true') {
+    mediaType = 'video';
+  } else if (process.env.FORCE_PHOTO === 'true') {
+    mediaType = 'photo';
+  } else {
+    mediaType = await nextMediaType(acc.accountId);
+  }
   if (mediaType === 'video') {
     await processVideoAccount(acc, otherLocaleIds, turkishLocaleId);
   } else {
