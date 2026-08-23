@@ -419,7 +419,10 @@ async function main() {
     return;
   }
 
-  const gotLock = await acquireRunLock('auto-launch', 1800); // 30 min TTL, safety net if the process crashes
+  const lockName = process.env.FORCE_PHOTO === 'true' ? 'auto-launch-photo'
+    : process.env.FORCE_VIDEO === 'true' ? 'auto-launch-video'
+    : 'auto-launch';
+  const gotLock = await acquireRunLock(lockName, 1800); // 30 min TTL, safety net if the process crashes
   if (!gotLock) {
     console.log('Another auto-launch run is already in progress — skipping this run to avoid overlap.');
     return;
@@ -472,7 +475,7 @@ async function main() {
     });
     console.log('Auto-launch run complete.');
   } finally {
-    await releaseRunLock('auto-launch');
+    await releaseRunLock(lockName);
   }
 }
 
