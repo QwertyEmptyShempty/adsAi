@@ -67,6 +67,20 @@ export async function setCachedVideo(accountId: string, fileId: string, video: {
 export const getCachedMacbookVideo = getCachedVideo;
 export const setCachedMacbookVideo = setCachedVideo;
 
+// Same caching idea, but for uploaded photo image hashes.
+const IMAGE_CACHE_PREFIX = 'imageCache:';
+
+export async function getCachedImage(accountId: string, fileId: string): Promise<string | null> {
+  const redis = getClient();
+  const val = await redis.get(`${IMAGE_CACHE_PREFIX}${accountId}:${fileId}`);
+  return val || null;
+}
+
+export async function setCachedImage(accountId: string, fileId: string, imageHash: string): Promise<void> {
+  const redis = getClient();
+  await redis.set(`${IMAGE_CACHE_PREFIX}${accountId}:${fileId}`, imageHash, 'EX', 45 * 24 * 60 * 60);
+}
+
 // Distributed lock: prevents two overlapping runs of the same job (e.g. a manual Trigger Run
 // firing while the scheduled run is still in progress) from hammering Facebook's video upload
 // pipeline simultaneously with the same token, which causes processing timeouts for everyone.

@@ -379,6 +379,86 @@ export function buildTwoTierMultiLanguageVideoCreativeBody(
   };
 }
 
+export function buildTwoTierMultiLanguageImageCreativeBody(
+  pageId: string,
+  primaryImageHash: string,
+  primaryLocaleIds: number[],
+  secondaryImageHash: string,
+  secondaryLocaleIds: number[],
+  destinationUrl: string,
+  title: string,
+  body: string,
+  secondaryTitle: string,
+  secondaryBody: string,
+  name: string,
+  instagramUserId: string | null
+) {
+  const titleLabel = (localeId: number) => `title_${localeId}`;
+  const bodyLabel = (localeId: number) => `body_${localeId}`;
+  const descLabel = (localeId: number) => `desc_${localeId}`;
+
+  const rules = [
+    // First rule is flagged is_default:true -- Facebook requires exactly this pattern (a real rule,
+    // with its own locales, that ALSO acts as the fallback for any unmatched locale).
+    {
+      customization_spec: { locales: [primaryLocaleIds[0]] },
+      title_label: { name: titleLabel(primaryLocaleIds[0]) },
+      body_label: { name: bodyLabel(primaryLocaleIds[0]) },
+      description_label: { name: descLabel(primaryLocaleIds[0]) },
+      image_label: { name: 'primary' },
+      link_url_label: { name: 'default' },
+      is_default: true,
+    },
+    ...primaryLocaleIds.slice(1).map(localeId => ({
+      customization_spec: { locales: [localeId] },
+      title_label: { name: titleLabel(localeId) },
+      body_label: { name: bodyLabel(localeId) },
+      description_label: { name: descLabel(localeId) },
+      image_label: { name: 'primary' },
+      link_url_label: { name: 'default' },
+    })),
+    ...secondaryLocaleIds.map(localeId => ({
+      customization_spec: { locales: [localeId] },
+      title_label: { name: titleLabel(localeId) },
+      body_label: { name: bodyLabel(localeId) },
+      description_label: { name: descLabel(localeId) },
+      image_label: { name: 'secondary' },
+      link_url_label: { name: 'default' },
+    })),
+  ];
+
+  const titles = [
+    ...primaryLocaleIds.map(localeId => ({ text: title, adlabels: [{ name: titleLabel(localeId) }] })),
+    ...secondaryLocaleIds.map(localeId => ({ text: secondaryTitle, adlabels: [{ name: titleLabel(localeId) }] })),
+  ];
+  const bodies = [
+    ...primaryLocaleIds.map(localeId => ({ text: body, adlabels: [{ name: bodyLabel(localeId) }] })),
+    ...secondaryLocaleIds.map(localeId => ({ text: secondaryBody, adlabels: [{ name: bodyLabel(localeId) }] })),
+  ];
+  const descriptions = [
+    ...primaryLocaleIds.map(localeId => ({ text: title, adlabels: [{ name: descLabel(localeId) }] })),
+    ...secondaryLocaleIds.map(localeId => ({ text: secondaryTitle, adlabels: [{ name: descLabel(localeId) }] })),
+  ];
+
+  return {
+    name,
+    object_story_spec: instagramUserId ? { page_id: pageId, instagram_user_id: instagramUserId } : { page_id: pageId },
+    asset_feed_spec: {
+      titles,
+      bodies,
+      descriptions,
+      images: [
+        { hash: primaryImageHash, adlabels: [{ name: 'primary' }] },
+        { hash: secondaryImageHash, adlabels: [{ name: 'secondary' }] },
+      ],
+      link_urls: [{ website_url: destinationUrl, adlabels: [{ name: 'default' }] }],
+      ad_formats: ['SINGLE_IMAGE'],
+      call_to_action_types: ['SUBSCRIBE'],
+      asset_customization_rules: rules,
+    },
+  };
+}
+
 export async function createAdCreative(accountId: string, body: object): Promise<FbResult<{ id: string; error?: any }>> {
   const token = process.env.FB_ACCESS_TOKEN;
   const res = await fetch(`https://graph.facebook.com/v19.0/act_${accountId}/adcreatives?access_token=${token}`, {

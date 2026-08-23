@@ -1,11 +1,12 @@
 import { getActiveAccounts, AccountConfig } from '../config';
-import { nextMediaType, nextScheme, getCachedVideo, setCachedVideo, acquireRunLock, releaseRunLock } from '../mediaState';
+import { nextMediaType, nextScheme, getCachedVideo, setCachedVideo, getCachedImage, setCachedImage, acquireRunLock, releaseRunLock } from '../mediaState';
 import {
   findCandidateFolders,
   pickLatestFolder,
   listFilesInFolder,
   downloadFileBuffer,
   getMacbookVideoFile,
+  getMacbookPhotoFile,
   DriveFile,
 } from '../googleDrive';
 import {
@@ -18,29 +19,33 @@ import {
   uploadVideoByBuffer,
   waitForVideoReady,
   getVideoThumbnail,
-  buildImageCreativeBody,
+  buildTwoTierMultiLanguageImageCreativeBody,
   buildTwoTierMultiLanguageVideoCreativeBody,
   resolveAdLocaleIds,
   createAdCreative,
 } from '../facebookCampaigns';
 import { sendTelegramMessage } from '../telegram';
 
-// Languages used in the successful "18.07_TR запускЧерезЯзыкиИФинансы" campaign
+// Languages used in the successful "18.07_TR запускЧерезЯзыкиИФинансы" campaign (video)
 const AD_LANGUAGES = ['Armenian', 'Malay', 'Filipino', 'German', 'Esperanto', 'Norwegian', 'Persian', 'Traditional Chinese (Taiwan)'];
 const TURKISH_LANGUAGE = 'Turkish';
 const AD_TITLE = 'MacBook Air с чипом M5';
 const AD_BODY = 'Чип M5 — это не просто обновление. Это другой уровень скорости: повседневные задачи, монтаж, работа с ИИ — всё летает. До 18 часов автономной работы, чтобы вы закрывали крышку только когда сами захотите.\nНевероятно тонкий и лёгкий алюминиевый корпус. Яркий Liquid Retina дисплей. Камера Center Stage, которая всегда держит вас в кадре. 16 ГБ унифицированной памяти и 512 ГБ накопителя уже в базовой комплектации.';
 
-const MIN_CREATIVES = 2;
-const MAX_CREATIVES = 7;
-const BROKEN_FILES = ['13111.mp4'];
+// Languages used in the "21.07_TR ЗапускФотокСЯзыкамиИФинансами" campaign (photo)
+// Note: native-name candidates below (not yet fully verified via /search?type=adlocale like the video set was) --
+// resolveAdLocaleId gracefully returns null for anything that doesn't match, so an unresolved language is
+// just silently dropped from the ad rather than breaking the launch. Verify with ads-debug-locales before relying on all 9.
+const PHOTO_AD_LANGUAGES = ['Gaeilge', 'नेपाली', 'Esperanto', 'Bahasa Melayu', 'Čeština', 'Kiswahili', 'Српски', 'Hrvatski', 'मराठी'];
+const PHOTO_TURKISH_LANGUAGE = 'Türkçe';
+const PHOTO_AD_TITLE = 'Продаю свой MacBook';
+const PHOTO_AD_BODY = 'Брал для учёбы и работы, пользовался аккуратно, всё работает отлично. Никаких падений, царапин серьёзных нет, батарея держит нормально.\nПродаю, потому что перешёл на другой ноут, этот просто лежит без дела. Жалко, но пусть лучше кому-то пригодится.\nЦена адекватная, торг небольшой возможен.\nПишите в личку, если интересно — расскажу подробнее, скину фото и видео.';
+const PHOTO_TURKISH_TITLE = 'Merhaba Dostum';
+const PHOTO_TURKISH_BODY = 'Merhaba Meryem';
 
-function pickRandomFiles(files: DriveFile[]): DriveFile[] {
-  const usableFiles = files.filter(f => !BROKEN_FILES.includes(f.name));
-  const count = Math.min(usableFiles.length, MIN_CREATIVES + Math.floor(Math.random() * (MAX_CREATIVES - MIN_CREATIVES + 1)));
-  const shuffled = [...usableFiles].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-}
+const MIN_PHOTO_CREATIVES = 2;
+const MAX_PHOTO_CREATIVES = 10;
+const BROKEN_FILES = ['13111.mp4'];
 
 function buildCampaignName(scheme: string, label: string): string {
   const now = new Date();
@@ -229,8 +234,15 @@ async function processVideoAccount(
 }
 
 // Photo path: unchanged, simple single-language image ads, random 2-7 creatives.
-async function processPhotoAccount(acc: AccountConfig) {
+async function processPhotoAccount(acc: AccountConfig, photoOtherLocaleIds: number[], photoTurkishLocaleId: number | null) {
   const label = acc.label;
+
+  const macbookPhotoFile = await getMacbookPhotoFile();
+  if (!macbookPhotoFile) {
+    console.error(`[${label}] No MacBook filler photo found, skipping.`);
+    await sendTelegramMessage(`⚠️ <b>${label}</b>\nНе найдено фото MacBook в папке-филлере.`);
+    return;
+  }
 
   const { photoFolders } = await findCandidateFolders();
   const folder = pickLatestFolder(photoFolders);
@@ -239,12 +251,18 @@ async function processPhotoAccount(acc: AccountConfig) {
     return;
   }
   const files = await listFilesInFolder(folder.id);
-  if (files.length === 0) {
-    console.log(`[${label}] Folder "${folder.name}" has no files, skipping.`);
+  const usableFiles = files.filter(f => !BROKEN_FILES.includes(f.name));
+  if (usableFiles.length === 0) {
+    console.log(`[${label}] Photo folder "${folder.name}" has no usable files, skipping.`);
     return;
   }
-  const picked = pickRandomFiles(files);
-  const scheme = Math.random() < 0.5 ? '1-N-1' : '1-1-N';
+
+  // Random count (2-10) and random scheme each run, per user request -- not alternating like video.
+  const count = Math.min(usableFiles.length, MIN_PHOTO_CREATIVES + Math.floor(Math.random() * (MAX_PHOTO_CREATIVES - MIN_PHOTO_CREATIVES + 1)));
+  const shuffled = [...usableFiles].sort(() => Math.random() - 0.5);
+  const picked = shuffled.slice(0, count);
+  const scheme = Math.random() < 0.5 ? `1-${count}-1` : `1-1-${count}`;
+  const isSharedAdsetScheme = scheme.startsWith('1-1-');
   const campaignName = buildCampaignName(scheme, label);
 
   console.log(`[${label}] photo, folder="${folder.name}", ${picked.length} creatives, scheme=${scheme}`);
@@ -263,6 +281,11 @@ async function processPhotoAccount(acc: AccountConfig) {
     return;
   }
 
+  const instagramUserId = await getOrCreatePageBackedInstagramAccount(pageId);
+  if (!instagramUserId) {
+    console.warn(`[${label}] No Instagram (page-backed) account available.`);
+  }
+
   const campaignRes = await createCampaign(acc.accountId, campaignName, acc.dailyBudgetMinorUnits);
   if (!campaignRes.ok || campaignRes.body.error) {
     console.error(`[${label}] Campaign creation failed:`, campaignRes.body.error || campaignRes.status);
@@ -271,63 +294,115 @@ async function processPhotoAccount(acc: AccountConfig) {
   }
   const campaignId = campaignRes.body.id;
 
+  // Upload the MacBook (shared) photo once per account -- reuse cached image hash if we've
+  // already uploaded this exact file for this account before.
+  let macbookImageHash = await getCachedImage(acc.accountId, macbookPhotoFile.id);
+  if (macbookImageHash) {
+    console.log(`[${label}] Reusing cached MacBook photo (${macbookImageHash}).`);
+  } else {
+    const buffer = await downloadFileBuffer(macbookPhotoFile.id);
+    const imgRes = await uploadImage(acc.accountId, buffer, macbookPhotoFile.name);
+    if (!imgRes.hash) {
+      console.error(`[${label}] MacBook photo upload failed:`, imgRes.error?.message);
+      await sendTelegramMessage(`⚠️ <b>${label}</b>\nНе удалось загрузить фото MacBook.`);
+      return;
+    }
+    macbookImageHash = imgRes.hash;
+    await setCachedImage(acc.accountId, macbookPhotoFile.id, macbookImageHash);
+  }
+
   let sharedAdsetId: string | null = null;
+  if (isSharedAdsetScheme) {
+    const adsetRes = await createAdset(acc.accountId, campaignId, `${campaignName} — Adset`, pixelId);
+    if (!adsetRes.ok || adsetRes.body.error) {
+      console.error(`[${label}] Shared adset creation failed:`, adsetRes.body.error?.message);
+      await sendTelegramMessage(`⚠️ <b>${label}</b>\nОшибка создания адсета: ${adsetRes.body.error?.message}`);
+      return;
+    }
+    sharedAdsetId = adsetRes.body.id;
+  }
+
   let successCount = 0;
 
-  for (let i = 0; i < picked.length; i++) {
-    const file = picked[i];
+  await runWithConcurrency(picked, 3, async (file, i) => {
     try {
       let adsetId: string;
-      if (scheme === '1-N-1' || !sharedAdsetId) {
+      if (isSharedAdsetScheme) {
+        adsetId = sharedAdsetId!;
+      } else {
         const adsetRes = await createAdset(acc.accountId, campaignId, `${campaignName} — Adset ${i + 1}`, pixelId);
         if (!adsetRes.ok || adsetRes.body.error) {
           console.error(`[${label}] Adset ${i + 1} creation failed:`, adsetRes.body.error?.message);
-          continue;
+          return;
         }
         adsetId = adsetRes.body.id;
-        if (scheme === '1-1-N') sharedAdsetId = adsetId;
-      } else {
-        adsetId = sharedAdsetId;
       }
 
-      const buffer = await downloadFileBuffer(file.id);
-      const imgRes = await uploadImage(acc.accountId, buffer, file.name);
-      if (!imgRes.hash) {
-        console.error(`[${label}] Image upload failed for ${file.name}:`, imgRes.error?.message);
-        continue;
+      let dailyImageHash = await getCachedImage(acc.accountId, file.id);
+      if (dailyImageHash) {
+        console.log(`[${label}] Reusing cached photo for ${file.name} (${dailyImageHash}).`);
+      } else {
+        const buffer = await downloadFileBuffer(file.id);
+        const imgRes = await uploadImage(acc.accountId, buffer, file.name);
+        if (!imgRes.hash) {
+          console.error(`[${label}] Image upload failed for ${file.name}:`, imgRes.error?.message);
+          return;
+        }
+        dailyImageHash = imgRes.hash;
+        await setCachedImage(acc.accountId, file.id, dailyImageHash);
       }
-      const creativeBody = buildImageCreativeBody(pageId, imgRes.hash, destinationUrl, `${campaignName} — Creative ${i + 1}`);
+
+      const creativeBody = buildTwoTierMultiLanguageImageCreativeBody(
+        pageId,
+        macbookImageHash!,
+        photoOtherLocaleIds,
+        dailyImageHash,
+        photoTurkishLocaleId !== null ? [photoTurkishLocaleId] : [],
+        destinationUrl,
+        PHOTO_AD_TITLE,
+        PHOTO_AD_BODY,
+        PHOTO_TURKISH_TITLE,
+        PHOTO_TURKISH_BODY,
+        `${campaignName} — Creative ${i + 1}`,
+        instagramUserId
+      );
 
       const creativeRes = await createAdCreative(acc.accountId, creativeBody);
       if (!creativeRes.ok || creativeRes.body.error) {
         console.error(`[${label}] Creative creation failed for ${file.name}:`, JSON.stringify(creativeRes.body.error));
-        continue;
+        return;
       }
 
-      const adRes = await createAd(acc.accountId, `${campaignName} — Ad`, adsetId, creativeRes.body.id);
+      const adRes = await createAd(acc.accountId, `${campaignName} — Ad ${i + 1}`, adsetId, creativeRes.body.id);
       if (!adRes.ok || adRes.body.error) {
         console.error(`[${label}] Ad creation failed for ${file.name}:`, JSON.stringify(adRes.body.error));
-        continue;
+        return;
       }
 
       successCount++;
     } catch (err) {
       console.error(`[${label}] Unexpected error on creative ${i + 1}:`, err);
     }
-  }
+  });
 
-  console.log(`[${label}] Done: ${successCount}/${picked.length} ads created in campaign "${campaignName}"`);
+  console.log(`[${label}] Done: ${successCount}/${picked.length} ads created in campaign "${campaignName}" (scheme ${scheme})`);
   await sendTelegramMessage(
-    `✅ <b>${campaignName}</b>\nАккаунт: ${label}\nУспешно: ${successCount} из ${picked.length}`
+    `✅ <b>${campaignName}</b>\nАккаунт: ${label}\nСхема: ${scheme}\nУспешно: ${successCount} из ${picked.length} (MacBook + своё дневное фото на турецкий в каждом)`
   );
 }
 
-async function processAccount(acc: AccountConfig, otherLocaleIds: number[], turkishLocaleId: number | null) {
+async function processAccount(
+  acc: AccountConfig,
+  otherLocaleIds: number[],
+  turkishLocaleId: number | null,
+  photoOtherLocaleIds: number[],
+  photoTurkishLocaleId: number | null
+) {
   const mediaType = process.env.FORCE_VIDEO === 'true' ? 'video' : await nextMediaType(acc.accountId);
   if (mediaType === 'video') {
     await processVideoAccount(acc, otherLocaleIds, turkishLocaleId);
   } else {
-    await processPhotoAccount(acc);
+    await processPhotoAccount(acc, photoOtherLocaleIds, photoTurkishLocaleId);
   }
 }
 
@@ -361,6 +436,17 @@ async function main() {
     }
     console.log(`Resolved ${otherLocaleIds.length}/${AD_LANGUAGES.length} other locale IDs, Turkish=${turkishLocaleId}.`);
 
+    console.log('Resolving photo ad locale IDs...');
+    const resolvedPhotoOthers = await resolveAdLocaleIds(PHOTO_AD_LANGUAGES);
+    const resolvedPhotoTurkish = await resolveAdLocaleIds([PHOTO_TURKISH_LANGUAGE]);
+    const missingPhoto = resolvedPhotoOthers.filter(r => r.id === null).map(r => r.name);
+    if (missingPhoto.length > 0) {
+      console.warn('Could not resolve photo locale IDs for:', missingPhoto.join(', '));
+    }
+    const photoOtherLocaleIds = resolvedPhotoOthers.filter(r => r.id !== null).map(r => r.id as number);
+    const photoTurkishLocaleId = resolvedPhotoTurkish[0]?.id ?? null;
+    console.log(`Resolved ${photoOtherLocaleIds.length}/${PHOTO_AD_LANGUAGES.length} photo locale IDs, Turkish=${photoTurkishLocaleId}.`);
+
     const accounts = getActiveAccounts();
     let testAccounts = accounts;
     if (process.env.TEST_ACCOUNT_ID) {
@@ -371,7 +457,7 @@ async function main() {
     console.log(`Starting auto-launch run for ${testAccounts.length} active accounts...`);
     await runWithConcurrency(testAccounts, 3, async (acc) => {
       try {
-        await processAccount(acc, otherLocaleIds, turkishLocaleId);
+        await processAccount(acc, otherLocaleIds, turkishLocaleId, photoOtherLocaleIds, photoTurkishLocaleId);
       } catch (err) {
         console.error(`Account ${acc.label} (${acc.accountId}) failed entirely:`, err);
         await sendTelegramMessage(`⚠️ <b>${acc.label}</b>\nЗапуск полностью упал: ${err}`);
