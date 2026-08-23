@@ -1,8 +1,13 @@
 import { fbGet } from '../facebook';
 
 const CANDIDATES: Record<string, string[]> = {
-  Norwegian: ['Norsk', 'Norsk (bokmål)', 'Norwegian Bokmal', 'Norwegian bokmal', 'no_NO', 'Bokmål'],
-  'Traditional Chinese (Taiwan)': ['繁體中文(台灣)', '繁體中文', '中文(台灣)', 'zh_Hant_TW', 'Chinese (Traditional)', 'Mandarin'],
+  Irish: ['Irish', 'Gaeilge', 'ga_IE'],
+  Nepali: ['Nepali', 'नेपाली', 'ne_NP'],
+  Czech: ['Czech', 'Čeština', 'cs_CZ'],
+  Swahili: ['Swahili', 'Kiswahili', 'sw_KE'],
+  Serbian: ['Serbian', 'Српски', 'Srpski', 'sr_RS'],
+  Croatian: ['Croatian', 'Hrvatski', 'hr_HR'],
+  Marathi: ['Marathi', 'मराठी', 'mr_IN'],
 };
 
 async function main() {
