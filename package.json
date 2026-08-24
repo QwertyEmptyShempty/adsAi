@@ -15,6 +15,7 @@
     "analyze-worst-video": "node dist/jobs/analyzeWorstVideo.js",
     "identify-worst-ad-file": "node dist/jobs/identifyWorstAdFile.js",
     "check-video-names": "node dist/jobs/checkVideoNames.js",
+    "check-locks": "node dist/jobs/checkLocks.js",
     "dev:auto-pause": "ts-node src/jobs/autoPause.ts",
     "dev:auto-launch": "ts-node src/jobs/autoLaunch.ts",
     "dev:launch-new-creative": "ts-node src/jobs/launchNewCreative.ts"
