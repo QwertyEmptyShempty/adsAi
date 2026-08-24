@@ -178,7 +178,7 @@ async function processVideoAccount(
 
   let successCount = 0;
 
-  await runWithConcurrency(pickedFiles, 3, async (file, i) => {
+  await runWithConcurrency(pickedFiles, 2, async (file, i) => {
     try {
       let adsetId: string;
       if (scheme === '1-1-5') {
@@ -329,7 +329,7 @@ async function processPhotoAccount(acc: AccountConfig, photoOtherLocaleIds: numb
 
   let successCount = 0;
 
-  await runWithConcurrency(picked, 3, async (file, i) => {
+  await runWithConcurrency(picked, 2, async (file, i) => {
     try {
       let adsetId: string;
       if (isSharedAdsetScheme) {
@@ -427,7 +427,7 @@ async function main() {
   const lockName = process.env.FORCE_PHOTO === 'true' ? 'auto-launch-photo'
     : process.env.FORCE_VIDEO === 'true' ? 'auto-launch-video'
     : 'auto-launch';
-  const gotLock = await acquireRunLock(lockName, 1800); // 30 min TTL, safety net if the process crashes
+  const gotLock = await acquireRunLock(lockName, 1200); // 20 min TTL, safety net if the process crashes (reduced from 30 to limit damage from OOM kills)
   if (!gotLock) {
     console.log('Another auto-launch run is already in progress — skipping this run to avoid overlap.');
     return;
@@ -470,7 +470,7 @@ async function main() {
       testAccounts = accounts.slice(0, 1);
     }
     console.log(`Starting auto-launch run for ${testAccounts.length} active accounts...`);
-    await runWithConcurrency(testAccounts, 3, async (acc) => {
+    await runWithConcurrency(testAccounts, 2, async (acc) => {
       try {
         await processAccount(acc, otherLocaleIds, turkishLocaleId, photoOtherLocaleIds, photoTurkishLocaleId);
       } catch (err) {
