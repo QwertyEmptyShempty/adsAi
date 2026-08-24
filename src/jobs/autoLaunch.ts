@@ -114,9 +114,14 @@ async function processVideoAccount(
     return;
   }
 
+  // Random pick 4-5 files instead of using every file in the folder (folder can grow to 8-10+ over time).
+  const pickCount = Math.min(usableFiles.length, 4 + Math.floor(Math.random() * 2)); // 4 or 5
+  const shuffledFiles = [...usableFiles].sort(() => Math.random() - 0.5);
+  const pickedFiles = shuffledFiles.slice(0, pickCount);
+
   const scheme = await nextScheme(acc.accountId);
   const campaignName = buildCampaignName(scheme, label);
-  console.log(`[${label}] video, folder="${folder.name}", ${usableFiles.length} creatives (all used), scheme=${scheme}`);
+  console.log(`[${label}] video, folder="${folder.name}", ${pickedFiles.length} of ${usableFiles.length} creatives picked, scheme=${scheme}`);
 
   const { pixelId, pixelWarning, pageId, pageWarning, destinationUrl } = await resolvePixelAndPage(
     acc.accountId,
@@ -173,7 +178,7 @@ async function processVideoAccount(
 
   let successCount = 0;
 
-  await runWithConcurrency(usableFiles, 3, async (file, i) => {
+  await runWithConcurrency(pickedFiles, 3, async (file, i) => {
     try {
       let adsetId: string;
       if (scheme === '1-1-5') {
@@ -227,9 +232,9 @@ async function processVideoAccount(
     }
   });
 
-  console.log(`[${label}] Done: ${successCount}/${usableFiles.length} ads created in campaign "${campaignName}" (scheme ${scheme})`);
+  console.log(`[${label}] Done: ${successCount}/${pickedFiles.length} ads created in campaign "${campaignName}" (scheme ${scheme})`);
   await sendTelegramMessage(
-    `✅ <b>${campaignName}</b>\nАккаунт: ${label}\nСхема: ${scheme}\nУспешно: ${successCount} из ${usableFiles.length} (MacBook + свой турецкий креатив в каждом)`
+    `✅ <b>${campaignName}</b>\nАккаунт: ${label}\nСхема: ${scheme}\nУспешно: ${successCount} из ${pickedFiles.length} (MacBook + свой турецкий креатив в каждом)`
   );
 }
 
