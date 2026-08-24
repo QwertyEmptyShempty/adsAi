@@ -57,12 +57,15 @@ function evaluateAd(row: AdRow): Evaluated {
   const softKill = graceElapsed && lpvCost !== null && lpvCost > RULES.softKillLpvCost && !hasSubscription;
   const subscribeCost = hasSubscription ? spend / subscribeCount : null;
   const subscribeCostKill = graceElapsed && hasSubscription && subscribeCost !== null && subscribeCost > RULES.softKillSubscribeCost;
+  // New rule: if an ad has run for 3+ days and never brought a single subscription, kill it permanently.
+  const zeroSubsKill = ageDays >= 3 && !hasSubscription;
 
-  const shouldPause = hardKill || softKill || subscribeCostKill;
+  const shouldPause = hardKill || softKill || subscribeCostKill || zeroSubsKill;
   let reason: string | null = null;
   if (hardKill) reason = 'hard_kill_lpv';
   else if (softKill) reason = 'soft_kill_lpv_after_grace';
   else if (subscribeCostKill) reason = 'soft_kill_subscribe_cost_after_grace';
+  else if (zeroSubsKill) reason = 'zero_subscriptions_after_3_days';
 
   return {
     ad_id: row.id,

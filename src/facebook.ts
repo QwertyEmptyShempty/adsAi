@@ -89,3 +89,28 @@ export async function deleteAd(adId: string): Promise<FbResult> {
 export async function deleteCampaign(campaignId: string): Promise<FbResult> {
   return fbDelete(`/${campaignId}`);
 }
+
+export interface CampaignRow {
+  id: string;
+  name: string;
+  daily_budget?: string;
+  effective_status?: string;
+  insights?: { data?: AdInsightsRow[] };
+}
+
+export async function fetchAccountCampaigns(accountId: string): Promise<CampaignRow[]> {
+  const result = await fbGet<{ data?: CampaignRow[]; error?: any }>(`/act_${accountId}/campaigns`, {
+    fields: 'id,name,daily_budget,effective_status,insights.date_preset(maximum){spend,actions}',
+    filtering: JSON.stringify([{ field: 'effective_status', operator: 'IN', value: ['ACTIVE'] }]),
+    limit: '200',
+  });
+  if (!result.ok || result.body.error) {
+    console.error(`fetchAccountCampaigns(${accountId}) failed:`, result.body.error || result.status);
+    return [];
+  }
+  return result.body.data || [];
+}
+
+export async function updateCampaignBudget(campaignId: string, dailyBudgetMinorUnits: number): Promise<FbResult> {
+  return fbPost(`/${campaignId}`, { daily_budget: String(Math.round(dailyBudgetMinorUnits)) });
+}
