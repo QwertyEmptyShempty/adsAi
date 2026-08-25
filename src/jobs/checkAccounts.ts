@@ -1,6 +1,6 @@
 import { fbGet } from '../facebook';
 
-const ACCOUNT_IDS = ['1581600120211938', '1049537227666018', '2945518242465040', '1484179916801451'];
+const ACCOUNT_IDS = ['1017176071306940', '1078383794753243'];
 
 async function main() {
   for (const id of ACCOUNT_IDS) {
